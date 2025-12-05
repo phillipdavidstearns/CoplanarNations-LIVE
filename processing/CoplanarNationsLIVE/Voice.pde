@@ -74,8 +74,8 @@ class Voices {
     }
     catch (Exception e) {
       println("Caught Exception @ getPixelData: "+e);
-      return null;
     }
+    return null;
   }
 
   void randomize() {
@@ -91,7 +91,7 @@ class Voice {
   Register register;
   PVector position;
   PVector velocity;
-  int size;
+
   String orientation = "horizontal";
   int mode = 0;
   boolean wrap = true;
@@ -109,6 +109,18 @@ class Voice {
 
   boolean mute = true;
 
+  float base = 12;
+  int start_size;
+  int end_size;
+  int size=2;
+  float size_progress = 0.0;
+  float size_step = 0.0125;
+
+  // Experimental pitch variation
+  float warble_amount = 0.05;
+  float warble_rate = 0.0025;
+  float warble_offset = random(-1, 1);
+
   Voice(String[][] _scale) {
     this.register = new Register();
     this.randomize();
@@ -121,21 +133,49 @@ class Voice {
     int octave_index = floor(random(this.scale.length));
     int note_index = floor(random(this.scale[octave_index].length));
     String note_name = this.scale[octave_index][note_index];
-    this.size = notes.get(note_name);
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = notes.get(note_name);
   }
 
   void random_note() {
     int note_index = floor(random(notes.size()));
-    this.size = notes.get(notes.keyArray()[note_index]);
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = notes.get(notes.keyArray()[note_index]);
   }
 
   void random_pitch() {
-    this.size = floor(random(2, 1920));
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = floor(random(2, 1920));
   }
 
   void update() {
+    this.update_size();
     if (this.move_enabled) this.move();
     if (this.arpeggiate) this.arpeggio();
+  }
+
+  float ease(float _progress, float _base) {
+    return log((_base - 1) * _progress + 1) / log(_base);
+  }
+
+  void update_size() {
+
+    this.size_progress = constrain(this.size_progress, 0.0, 1.0);
+
+    this.size = round(lerp(
+      this.start_size,
+      this.end_size,
+      this.ease(this.size_progress, this.base)
+      ) +
+      (this.size * this.warble_amount * 2 * (noise(frameCount * this.warble_rate + this.warble_offset)-0.5))
+      );
+
+    if (this.size_progress < 1) this.size_progress += this.size_step;
+
+    this.size = max(this.size, 2);
   }
 
   void arpeggio() {
@@ -180,8 +220,8 @@ class Voice {
       break;
     }
   }
-  
-  void randomize_orientation(){
+
+  void randomize_orientation() {
     this.orientation = random(1) < 0.5 ? "horizontal" : "vertical";
   }
 
@@ -242,8 +282,8 @@ class Voice {
   int[] getPixelData(int[] _pixels, int _qty) {
 
     int[] line = new int[_qty];
-    int start_pixel=this.getStart();
-    int line_position=this.getPosition();
+    int start_pixel = this.getStart();
+    int line_position = this.getPosition();
 
     int pixel = color(0);
     int value = 0;
@@ -286,7 +326,9 @@ class Voice {
 
   void setNote(String note) {
     if (notes.hasKey(note)) {
-      this.size = notes.get(note);
+      this.size_progress = 0.0;
+      this.start_size = this.size;
+      this.end_size = notes.get(note);
     }
   }
 

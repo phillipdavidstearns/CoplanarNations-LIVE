@@ -39,6 +39,7 @@ class Client(Thread):
     self.lastSlice = bytearray()
     self.is_connected = False
     self.doRun = False
+    self.lock = Lock()
 
   def init_socket(self):
     logging.info(f"connecting...")
@@ -70,7 +71,8 @@ class Client(Thread):
       message = json.loads(message)
       data = bytes(message['data'])
       if data :
-        self.buffer = data # if there's any data there, add it to the buffer  
+        with self.lock:
+          self.buffer = data # if there's any data there, add it to the buffer
     except socket.error as e:
       logging.error(f'read() Socket Error: {e}')
       self.lastSlice = bytearray()
@@ -85,9 +87,11 @@ class Client(Thread):
     bufferSize = frames * width
     if len(self.lastSlice) == 0:
       self.lastSlice = bytearray(bytes([127])*bufferSize)
-    extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
-    # remove the extracted data from the buffer
-    self.buffer = self.buffer[len(extractedFrames):]
+
+    with self.lock:
+      extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
+      # remove the extracted data from the buffer
+      self.buffer = self.buffer[len(extractedFrames):]
 
     if len(extractedFrames) == 0:
       extractedFrames = self.lastSlice
@@ -108,7 +112,7 @@ class Client(Thread):
           self.init_socket()
           sleep(5)
         self.read()
-        sleep(0.001)
+        sleep(0.0001)
       except Exception as e:
         logging.error('run(): %s' % repr(e))
 
@@ -132,7 +136,7 @@ class Audifier():
     self,
     qtyChannels=1,
     width=1,
-    rate=44100,
+    rate=48000,
     chunkSize=1920,
     deviceIndex=None,
     callback=None

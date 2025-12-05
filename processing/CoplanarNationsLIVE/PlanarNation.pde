@@ -3,12 +3,12 @@ class PlanarNation {
   float[][] vertices;
   float[][] vertices_morphed;
   float[][] vertices_target;
-  float scale = 1920.0;
+  //float scale = 1920.0;
   float[] noise_offset = {
-    random(-1,1),
-    random(-1,1),
-    random(-1,1),
-    random(-1,1)
+    random(-5,5),
+    random(-5,5),
+    random(-5,5),
+    random(-5,5)
   };
   float noise_position = 0.0;
   float noise_rate = 0.001;
@@ -42,15 +42,15 @@ class PlanarNation {
 
   void update() {
     if (this.edge_flicker) this.render_edges = random(1) < this.flicker_amount;
-    if (this.texture_flicker)this.render_texture = random(1) < this.flicker_amount;
-    this.do_morph();
+    if (this.texture_flicker) this.render_texture = random(1) < this.flicker_amount;
+    if (this.do_animate) this.noise_position += this.noise_rate;
+    if (this.morph_enabled) this.do_morph();
   }
 
   //----------------------------------------------------------------
   // morphControls
 
   void do_morph() {
-    if ( !this.morph_enabled ) return;
     if (this.morph_progress >= 1.0) {
       this.morph_enabled = false;
       this.morph_progress = 0.0;
@@ -115,16 +115,15 @@ class PlanarNation {
 
     float[] end = this.morph_enabled ? this.vertices_morphed[0] : this.vertices[0];
     this.placeVertex(end);
-    if(this.do_animate) this.noise_position += this.noise_rate;
     endShape();
   }
 
   void placeVertex(float[] vertex) {
     vertex(
-      width * (vertex[0] + 2 *( noise(vertex[0], this.noise_position + this.noise_offset[0]) - 0.5)),
-      height * (vertex[1] + 2 * (noise(vertex[1], this.noise_position + this.noise_offset[1]) - 0.5)),
-      vertex[2] + 2 * (noise(vertex[2], this.noise_position + this.noise_offset[2]) - 0.5),
-      vertex[3] + 2 * (noise(vertex[3], this.noise_position + this.noise_offset[3]) - 0.5)
+      width * ( vertex[0] * 2.0 * ( noise(50.0 * vertex[0], this.noise_offset[0] - this.noise_position) - 0.5)),
+      width * ( vertex[1] * 2.0 * ( noise(-50.0 * vertex[1], this.noise_offset[1] + this.noise_position) - 0.5)),
+      vertex[2] * 2.0 * ( noise(50.0 * vertex[2], this.noise_offset[2] - this.noise_position) - 0.5),
+      vertex[3] * 2.0 * ( noise(-50.0 * vertex[3], this.noise_offset[3] + this.noise_position) - 0.5)
       );
   }
 
