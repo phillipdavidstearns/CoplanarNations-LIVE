@@ -61,8 +61,8 @@ class Register {
       this.lfsr_left();
     }
   }
-  
-  void randomize(){
+
+  void randomize() {
     this.randomize_register();
     this.randomize_taps();
   }

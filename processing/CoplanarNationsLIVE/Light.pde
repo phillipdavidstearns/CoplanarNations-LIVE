@@ -1,4 +1,4 @@
-class Light{
+class Light {
   color c;
   PVector position;
   PVector position_lerp;
@@ -6,43 +6,43 @@ class Light{
   float position_progress=0.0;
   float position_rate = 0.01;
   boolean do_position = false;
-  
-  Light(){
+
+  Light() {
     this.c = color(255);
-    this.position = new PVector(0.0,0.0,100);
+    this.position = new PVector(0.0, 0.0, 100);
     this.position_lerp = this.position.copy();
     this.position_target = this.position.copy();
   }
-  
-  Light(PVector _position){
+
+  Light(PVector _position) {
     this.c = color(255);
     this.position = _position.copy();
     this.position_lerp = _position.copy();
     this.position_target = _position.copy();
   }
-  
-  Light(color _c, PVector _position){
+
+  Light(color _c, PVector _position) {
     this.c = _c;
     this.position = _position.copy();
     this.position_lerp = _position.copy();
     this.position_target = _position.copy();
   }
 
-  void setColor(color _c){
-    this.c = _c; 
+  void setColor(color _c) {
+    this.c = _c;
   }
-  
-  void update(){
+
+  void update() {
     this.position_light();
   }
-  
-  void light(){
+
+  void light() {
     pointLight(
       this.c >> 16 & 0xFF, this.c >> 8 & 0xFF, this.c & 0xff,
       this.position_lerp.x, this.position_lerp.y, this.position_lerp.z
       );
   }
-  
+
   void randomize_position() {
     this.position = this.position_lerp.copy();
     this.position_progress = 0.0;
@@ -104,7 +104,4 @@ class Light{
       this.do_position = false;
     }
   }
-  
-  
-  
 }

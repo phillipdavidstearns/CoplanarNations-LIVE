@@ -5,10 +5,10 @@ class PlanarNation {
   float[][] vertices_target;
   //float scale = 1920.0;
   float[] noise_offset = {
-    random(-5,5),
-    random(-5,5),
-    random(-5,5),
-    random(-5,5)
+    random(-5, 5),
+    random(-5, 5),
+    random(-5, 5),
+    random(-5, 5)
   };
   float noise_position = 0.0;
   float noise_rate = 0.001;
@@ -23,7 +23,7 @@ class PlanarNation {
   boolean edge_flicker=false;
   boolean texture_flicker=false;
   float flicker_amount=0.5;
-  
+
 
   //----------------------------------------------------------------
   // Constructors
@@ -88,7 +88,7 @@ class PlanarNation {
 
     textureMode(NORMAL);
     textureWrap(REPEAT);
-    
+
 
     //draw the vertices
     beginShape();
@@ -97,11 +97,11 @@ class PlanarNation {
     } else {
       noFill();
     }
-    
-    for (int i = 0; i < this.vertices.length - 2; i++){
+
+    for (int i = 0; i < this.vertices.length - 2; i++) {
       start = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
       this.placeVertex(start);
-      for(int j = 1; j < 3; j++){
+      for (int j = 1; j < 3; j++) {
         temp = this.morph_enabled ? this.vertices_morphed[i+j] : this.vertices[i+j];
         this.placeVertex(temp);
       }
@@ -154,8 +154,8 @@ class PlanarNation {
     return new float[]{
       random(-1, 1),
       random(-1, 1),
-      random(-1,1),
-      random(-1,1)
+      random(-1, 1),
+      random(-1, 1)
     };
   }
   //----------------------------------------------------------------

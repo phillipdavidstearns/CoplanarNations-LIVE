@@ -118,7 +118,7 @@ String[][] B_locrian = {
   },
 };
 
-void populate_notes(){
+void populate_notes() {
   notes.set("F#0", 1907);
   notes.set("G0", 1800);
   notes.set("G#0", 1699);
