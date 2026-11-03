@@ -66,32 +66,39 @@ def shutdown_pyaudio():
 # - extract audio data from the buffer to hand off to the audio stream
 
 async def coplanar_nations_client(host='localhost', port=12345):
-  logging.info(f"Starting network stream.")
+  logging.info(f"Starting network client.")
 
   global network_writer, network_reader
 
   while True:
+
+    #----------------------------------------------------------------
+
     # If there's no network connection, attempt to connect.
-    # Retry after 1 second if attempt fails.
     while network_writer == None:
+
       try:
         network_reader, network_writer = await asyncio.open_connection(host, port)
+        logging.info(f"Connected to server @ {host}:{port}.")
       except OSError as e:
         logging.debug(f"OSError: {e}")
       except Exception as e:
         logging.error(f"While establishing server connection: {e}")
+
+      # Retry after 1 second if attempt fails.
       await asyncio.sleep(1)
 
-    logging.info(f"Connected to server @ {host}:{port}.")
+    #----------------------------------------------------------------
 
     # Upon successful connection, set up the PyAudio output stream
     initialize_audio_stream()
 
-    try:
+    #----------------------------------------------------------------
 
-      # network_writer is not None after establishing a TCP connection w/ Processing server
-      while network_writer:
+    # network_writer is not None after establishing a TCP connection w/ Processing server
+    while network_writer:
 
+      try:
         # check whether the audio stream had writable frames available
         if (frames := audio_stream.get_write_available()) >= BLOCK_SIZE:
 
@@ -115,11 +122,11 @@ async def coplanar_nations_client(host='localhost', port=12345):
         # wait for half the time if would take to play through the data
         await asyncio.sleep(BLOCK_SIZE / (2 * RATE))
 
-    except Exception as e:
-      logging.error(f"While writing to socket: {e}")
-      network_writer = None
-      network_reader = None
-      shutdown_pyaudio()
+      except Exception as e:
+        logging.error(f"While writing to socket: {e}")
+        network_writer = None
+        network_reader = None
+        shutdown_pyaudio()
 
 #================================================================
 # Creates instances of PyAudio and PyAudio.Stream objects.
@@ -213,6 +220,8 @@ def parse_args():
   )
 
   return parser.parse_args()
+
+#================================================================
 
 if __name__ == "__main__":
 

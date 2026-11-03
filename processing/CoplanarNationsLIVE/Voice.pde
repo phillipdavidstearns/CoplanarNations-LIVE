@@ -1,8 +1,10 @@
 //================================================================
+// Voices
+// A helper class to manage multiple Voice objects
+
 class Voices {
   ArrayList<Voice> voices;
   String[][] scale;
-
 
   Voices(int qty, String[][] _scale) {
     this.voices = new ArrayList<Voice>();
@@ -108,7 +110,10 @@ class Voice {
   String[][] scale;
 
   boolean arpeggiate = false;
-  int step_interval = 1;
+  int arppegio_rate = 1;
+  int step_interval = 0;
+  int step_count = 0;
+  int step_max = 0;
 
   boolean mute = true;
 
@@ -187,10 +192,45 @@ class Voice {
     String note = this.scale[(this.register.get() >> 3 & 0b111) % this.scale.length][this.register.get() & 0b111];
     this.setNote(note);
     if (frameCount % this.step_interval == this.step_interval - 1) {
+      if (this.step_count >= this.step_max) {
+        switch(int(random(1, 8))) {
+        case 1:
+          this.step_interval = 1*this.arppegio_rate;
+          this.step_max = 8 * int(random(1, 3));
+          break;
+        case 2:
+          this.step_interval = 2*this.arppegio_rate;
+          this.step_max = 4 * int(random(1, 3));
+          break;
+        case 3:
+          this.step_interval = 3*this.arppegio_rate;
+          this.step_max = 4 * int(random(1, 3));
+          break;
+        case 4:
+          this.step_interval = 4*this.arppegio_rate;
+          this.step_max = 4 * int(random(1, 3));
+          break;
+        case 5:
+          this.step_interval = 6*this.arppegio_rate;
+          this.step_max = 2 * int(random(1, 3));
+          break;
+        case 6:
+          this.step_interval = 8*this.arppegio_rate;
+          this.step_max = 1 * int(random(1, 3));
+          break;
+        case 7:
+          this.step_interval = 12*this.arppegio_rate;
+          this.step_max = 1 * int(random(1, 3));
+          break;
+        }
+
+        this.step_count=0;
+      }
       this.mute = random(1) < 0.25;
       if (random(1) < 0.75) {
         this.register.lfsr_left();
       }
+      this.step_count+=1;
     }
   }
 
@@ -291,7 +331,7 @@ class Voice {
     int line_position = this.getPosition();
 
     int pixel = color(0);
-    int value = 128;
+    int value = 0;
 
     for (int l = 0; l < _qty; l++) {
       if (!this.mute) {
@@ -330,9 +370,10 @@ class Voice {
 
   void setNote(String note) {
     if (notes.hasKey(note)) {
-      this.size_progress = 0.0;
-      this.start_size = this.size;
+      this.size_progress = 1.0;
+      this.start_size = notes.get(note);
       this.end_size = notes.get(note);
+      this.size = notes.get(note);
     }
   }
 

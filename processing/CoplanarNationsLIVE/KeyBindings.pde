@@ -325,9 +325,15 @@ void keyPressed() {
     break;
 
   case 'o': // all voices on
-    for (Voice v : voices.voices) {
-      v.random_scale();
-      v.randomize();
+    if (ctrl || cmd) {
+      for (Voice v : voices.voices){
+        v.arpeggiate = !v.arpeggiate;
+      }
+    } else {
+      for (Voice v : voices.voices) {
+        v.random_scale();
+        v.randomize();
+      }
     }
     break;
 

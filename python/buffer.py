@@ -8,9 +8,10 @@ class Buffer:
 
   #----------------------------------------------------------------
 
-  def __init__(self, size_limit=7056000, zero_pad=True):
+  def __init__(self, size_limit=7056000, zero_pad=True, zero_value=0):
     self.buffer = bytearray()
     self.size_limit = size_limit
+    self.zero_value = zero_value
     self.zero_pad = zero_pad
 
   #----------------------------------------------------------------
@@ -29,7 +30,7 @@ class Buffer:
     self.buffer = self.buffer[qty_bytes:]
     
     if self.zero_pad and qty_bytes > len(data):
-      data += bytes([0]) * (qty_bytes - len(data))
+      data += bytes([zero_value]) * (qty_bytes - len(data))
     
     return data
 
