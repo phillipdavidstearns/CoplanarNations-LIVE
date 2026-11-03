@@ -1,4 +1,4 @@
-float[][] vertices;
+
 boolean shift = false;
 boolean ctrl = false;
 boolean opt = false;
@@ -188,8 +188,9 @@ void keyPressed() {
     break;
 
   case 'm':
-    nationA.morph(nationA.generateVertices(qty_vertices));
-    nationB.morph(nationB.generateVertices(qty_vertices));
+    verts = generateVertices(qty_vertices);
+    nationA.morph(verts);
+    nationB.morph(verts);
     break;
 
   case'r':
@@ -197,10 +198,18 @@ void keyPressed() {
     if (!nationA.render_texture) nationA.randomizeVertices();
     break;
   case't':
-    nationA.render_texture = !nationA.render_texture;
-    if (!nationA.render_texture) nationA.randomizeVertices();
-    nationB.render_texture = !nationB.render_texture;
-    if (!nationB.render_texture) nationB.randomizeVertices();
+
+    if (ctrl || cmd) {
+      nationA.draw_mode+=1;
+      nationA.draw_mode%=2;
+      nationB.draw_mode+=1;
+      nationB.draw_mode%=2;
+    } else {
+      nationA.render_texture = !nationA.render_texture;
+      if (!nationA.render_texture) nationA.randomizeVertices();
+      nationB.render_texture = !nationB.render_texture;
+      if (!nationB.render_texture) nationB.randomizeVertices();
+    }
     break;
   case'y':
     nationB.render_texture = !nationB.render_texture;
@@ -227,6 +236,7 @@ void keyPressed() {
     break;
   case 'h':
     nationB.randomizeVertices();
+
     break;
 
   case 'F':
@@ -340,12 +350,14 @@ void keyPressed() {
     break;
 
   case 'k': // all voices on
+    println("Toggle Mutes");
     for (Voice v : voices.voices) {
       v.mute = !v.mute;
     }
     break;
 
   case 'K': // all voices off
+    println("Randomize Mutes");
     for (Voice v : voices.voices) {
       v.mute = random(1) < 0.5;
     }

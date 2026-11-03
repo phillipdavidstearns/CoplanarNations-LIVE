@@ -1,243 +1,285 @@
 #!/usr/bin/env python3
 
+import asyncio
 import sys
 import pyaudio
+import argparse
 import logging
 import socket
 import json
 from time import sleep
 from threading import Thread, Lock, Timer
 from signal import *
+from buffer import Buffer
 
 #===========================================================================
 # Signal Handler / shutdown procedure
 
 def signalHandler(signum, frame):
   logging.info(f'Caught termination signal: {signum}')
-  shutdown()
-
-def shutdown():
   try:
-    client.stop()
-    sound.stop()
+    shutdown_pyaudio()
   except Exception as e:
     logging.error(f'Oh dang! {repr(e)}')
   finally:
     logging.info('Peace out!')
     sys.exit(0)
 
-#===========================================================================
+#================================================================
+# PyAudio Functions
+#================================================================
 
-class Client(Thread):
-  def __init__(self, host='127.0.0.1', port=1337):
-    super().__init__()
-    self.daemon = True
-    self.host = host
-    self.port = port
-    self.buffer = bytearray()
-    self.socket = None
-    self.lastSlice = bytearray()
-    self.is_connected = False
-    self.doRun = False
-    self.lock = Lock()
+# Closes the audio stream
+def close_audio_stream():
+  global audio_stream
+  logging.debug(f"Closing audio stream.")
+  if audio_stream:
+    audio_stream.close()
+    audio_stream = None
 
-  def init_socket(self):
-    logging.info(f"connecting...")
-    try:
-      self.socket = socket.socket()
-      self.socket.connect((self.host, self.port))
-      self.is_connected = True
-      logging.info('connected!')
-    except socket.error as e:
-      logging.error(f"{type(e).__name__}: {e}")
-    except Exception as e:
-      self.is_connected = False
-      template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-      message = template.format(type(e).__name__, e.args)
-      logging.error(f'{message}')
+#----------------------------------------------------------------
 
-  def write(self, message):
-    try:
-      if self.is_connected: 
-        self.socket.send(bytes(message, 'utf-8'))
-    except socket.error as e:
-      logging.error(f'{e}')
-      self.is_connected = False
+# Terminates the PyAudio session and releases resources
+def terminate_pyaudio():
+  logging.debug(f"Terminating PyAudio Session.")
+  global pyaudio_obj
+  if pyaudio_obj:
+    pyaudio_obj.terminate()
+    pyaudio_obj = None
 
-  def read(self):
-    if not self.is_connected: return
-    try: # grab a chunk of data from the socket...
-      message = self.socket.recv(65536).decode('utf-8')
-      message = json.loads(message)
-      data = bytes(message['data'])
-      if data :
-        with self.lock:
-          self.buffer = data # if there's any data there, add it to the buffer
-    except socket.error as e:
-      logging.error(f'read() Socket Error: {e}')
-      self.lastSlice = bytearray()
-      self.is_connected = False
-    except json.JSONDecodeError as e:
-      pass
-    except Exception as e: # if there's definitely no data to be read. the socket will throw and exception
-      logging.error(f'read() Other Error: {type(e).__name__}\n{e}')
-      pass
+#----------------------------------------------------------------
 
-  def extractFrames(self, frames, width):
-    bufferSize = frames * width
-    if len(self.lastSlice) == 0:
-      self.lastSlice = bytearray(bytes([127])*bufferSize)
+# Closes the active record stream and terminates pyaudio pbject
+# Resets global variables to None
+def shutdown_pyaudio():
+  logging.info(f"Shutting down PyAudio.")
+  close_audio_stream()
+  terminate_pyaudio()
 
-    with self.lock:
-      extractedFrames = self.buffer[:bufferSize] # grab a slice of data from the buffer
-      # remove the extracted data from the buffer
-      self.buffer = self.buffer[len(extractedFrames):]
+#================================================================
+# asyncio TCP client used to connect to server hosted by Processing Sketch
+# basic funtionality includes:
+# - automatic reconnection attemps
+# - initialization of the audio outpu stream upon connection
+# - requests audio data from Processing sketch when needed by audio stream
+# - read and buffer audio data from the Processing sketch
+# - extract audio data from the buffer to hand off to the audio stream
 
-    if len(extractedFrames) == 0:
-      extractedFrames = self.lastSlice
-    else:
-      self.lastSlice = extractedFrames
+async def coplanar_nations_client(host='localhost', port=12345):
+  logging.info(f"Starting network stream.")
 
-    # this makes sure we return as many frames as requested, by padding with audio "0"
-    extractedFrames = extractedFrames + bytes([127]) * (bufferSize - len(extractedFrames))
+  global network_writer, network_reader
 
-    return extractedFrames
-
-  def run(self):
-    logging.info('[Client] run()')
-    self.doRun = True
-    while self.doRun:
+  while True:
+    # If there's no network connection, attempt to connect.
+    # Retry after 1 second if attempt fails.
+    while network_writer == None:
       try:
-        while not self.is_connected and self.doRun:
-          self.init_socket()
-          sleep(5)
-        self.read()
-        sleep(0.0001)
+        network_reader, network_writer = await asyncio.open_connection(host, port)
+      except OSError as e:
+        logging.debug(f"OSError: {e}")
       except Exception as e:
-        logging.error('run(): %s' % repr(e))
+        logging.error(f"While establishing server connection: {e}")
+      await asyncio.sleep(1)
 
-  def stop(self):
-    logging.info('[Client] stop()')
-    self.doRun = False
+    logging.info(f"Connected to server @ {host}:{port}.")
+
+    # Upon successful connection, set up the PyAudio output stream
+    initialize_audio_stream()
+
     try:
-      self.socket.close()
+
+      # network_writer is not None after establishing a TCP connection w/ Processing server
+      while network_writer:
+
+        # check whether the audio stream had writable frames available
+        if (frames := audio_stream.get_write_available()) >= BLOCK_SIZE:
+
+          # request them from the Processing server
+          network_writer.write(
+            json.dumps({'frame_count': frames}).encode()
+          )
+          await network_writer.drain()
+
+          # read data from the Processing server
+          # add data to the buffer it holds less data than available to be written to the audio stream
+          if (data := await network_reader.read(65536)):
+            buffer.put(data)
+
+          # extract the data available to write to the audio stream from the buffer
+          audio_data = bytes(buffer.get(frames))
+
+          # write that data to the audio stream
+          audio_stream.write(audio_data)
+
+        # wait for half the time if would take to play through the data
+        await asyncio.sleep(BLOCK_SIZE / (2 * RATE))
+
     except Exception as e:
-      logging.error('While closing socket: %e' % repr(e))
-    self.join()
+      logging.error(f"While writing to socket: {e}")
+      network_writer = None
+      network_reader = None
+      shutdown_pyaudio()
 
-#===========================================================================
-# Audifer
-# PyAudio stream instance and operations. By default pyAudio opens the stream in its own thread.
-# Callback mode is used. Documentation for PyAudio states the process
-# for playback runs in a separate thread. Initializing in a subclassed Thread may be redundant.
+#================================================================
+# Creates instances of PyAudio and PyAudio.Stream objects.
+# Called when a TCP network connection is establish with the Processing server.
+# When there are writeable frames available, they are requested from the server.
 
-class Audifier():
-  def __init__(
-    self,
-    qtyChannels=1,
-    width=1,
-    rate=48000,
-    chunkSize=1920,
-    deviceIndex=None,
-    callback=None
-  ):
+def initialize_audio_stream():
+  global pyaudio_obj, audio_stream
 
-    if not callback:
-      raise Exception(f'Audifier instance requires a callback function. Got: {callback}')
+  buffer.clear()
 
-    self.doRun=False
-    self.qtyChannels = qtyChannels
-    self.width = width
-    self.rate = rate
-    self.chunkSize = chunkSize
-    self.deviceIndex = deviceIndex
-    self.callback = callback
-    self.pa = pyaudio.PyAudio()
-    self.stream = self.initPyAudioStream()
-
-  #On initialization, check for and use headphones, else fallback to speakers
-  def initPyAudioStream(self):
-    if not self.deviceIndex:
-      for i in range(self.pa.get_device_count()):
-        device = self.pa.get_device_info_by_index(i)
-        print(device)
-        print()
-
-        if 'name' in device and device['name'] == 'External Headphones':
-          print('External Headphones')
-          self.deviceIndex = device['index']
-          break
-        elif 'name' in device and device['name'] == 'MacBook Pro Speakers':
-          print('MacBook Pro Speakers')
-          self.deviceIndex = device['index']
-          break
-
-    stream = self.pa.open(
-      format=self.pa.get_format_from_width(self.width),
-      channels=self.qtyChannels,
-      rate=self.rate,
-      frames_per_buffer=self.chunkSize,
-      input=False,
-      output_device_index=self.deviceIndex,
+  try:
+    pyaudio_obj = pyaudio.PyAudio()
+    audio_stream = pyaudio_obj.open(
+      format=FORMAT,
+      channels=CHANNELS,
+      rate=RATE,
+      frames_per_buffer=BLOCK_SIZE,
       output=True,
-      stream_callback=self.callback,
-      start=False
+      output_device_index=DEVICE
     )
-    return stream
 
-  def start(self):
-    logging.info('[AUDIFIER] run()')
-    logging.debug("Starting audio stream...")
-    self.stream.start_stream()
-    if self.stream.is_active():
-      logging.debug("Audio stream is active.")
+    logging.info("PyAudio Device Initialized")
+  except Exception as e:
+    logging.error(f"While inializing audio device: {e}")
+    sys.exit(1)
 
-  def stop(self):
-    logging.info('[AUDIFIER] stop()')
-    self.stream.close()
-    self.pa.terminate()
+#================================================================
+# Sets up argument parsing from cli
+
+def parse_args():
+
+  parser = argparse.ArgumentParser(description="AudioStream client")
+
+  parser.add_argument(
+    "--host",
+    required=False,
+    default="localhost",
+    type=str,
+    help="Specifies the location of the Processing server. Accepts CIDR or IPv4."
+  )
+
+  parser.add_argument(
+    "--port",
+    required=False,
+    default=1337,
+    type=int,
+    help="Listening port for the Processing server."
+  )
+
+  parser.add_argument(
+    "--width",
+    required=False,
+    default=1,
+    type=int,
+    choices=range(1,5),
+    help="Specify bit depth: 1 = 8 bits, 2 = 16 bits, 3 = 24 bits, 4 = 32 bits."
+  )
+
+  parser.add_argument(
+    "--device",
+    required=False,
+    default=None,
+    help="Specify which audio output device to use."
+  )
+
+  parser.add_argument(
+    "--samplerate",
+    required=False,
+    default=48000,
+    choices=[22050,44100,24000,48000,96000],
+    type=int,
+    help="Set samples per second. Device dependent. Accepted values: 22050, 24000, 44100, 48000, 96000"
+  )
+
+  parser.add_argument(
+    "--blocksize",
+    required=False,
+    default=1024,
+    type=int,
+    help="Sets the audio output buffer size. Use larger number if dropouts are experienced."
+  )
+
+  parser.add_argument(
+    "--loglevel",
+    required=False,
+    default=20,
+    type=int,
+    choices=[0,10,20,30,40,50],
+    help="Set logging level: 0=NOTSET, 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL",
+  )
+
+  return parser.parse_args()
 
 if __name__ == "__main__":
 
-  width = 1
-
-  logging.basicConfig(
-    level=10,
-    format='[Coplanar Nations Sound Engine] - %(levelname)s | %(message)s'
-  )
-
-  client = Client(
-      host = '127.0.0.1',
-      port = 1337
-    )
-
-  def audio_callback(in_data, frame_count, time_info, status):
-    message = json.dumps({
-      'type' : 'get',
-      'parameter' : 'frames',
-      'frame_count' : frame_count
-    })
-    client.write(message)
-    audioChunk = client.extractFrames(frame_count, width)
-    return(bytes(audioChunk), pyaudio.paContinue)
-
-  sound = Audifier(width=width, callback=audio_callback)
-
+  # setup signal handlers
   signal(SIGINT, signalHandler)
   signal(SIGTERM, signalHandler)
   signal(SIGHUP, signalHandler)
 
+  #----------------------------------------------------------------
+  # parse arguments from cli
+
+  args = parse_args()
+
+  #----------------------------------------------------------------
+  # configure logging
+
+  logging.basicConfig(
+    level=args.loglevel,
+    format='[Coplanar Nations Sound Engine] - %(levelname)s | %(message)s'
+  )
+
+  #----------------------------------------------------------------
+  # define global variables
+
+  WIDTH = args.width
+  FORMAT = pyaudio.get_format_from_width(WIDTH)
+  CHANNELS = 1
+  RATE = args.samplerate
+  BLOCK_SIZE = args.blocksize
+  DEVICE = args.device
+
+  pyaudio_obj = None
+  audio_stream = None
+  network_writer = None
+  network_reader = None
+  buffer = Buffer(zero_pad=False)
+
+  #----------------------------------------------------------------
+  # Sanity check that our variables are set as we wish
+
+  logging.info(f"Width: {WIDTH}")
+  logging.info(f"Format: {FORMAT}")
+  logging.info(f"Channels: {CHANNELS}")
+  logging.info(f"Sample Rate: {RATE}")
+  logging.info(f"Block Size: {BLOCK_SIZE}")
+  logging.info(f"Device Id: {DEVICE}")
+
+  logging.info(f"Host: {args.host}")
+  logging.info(f"Port: {args.port}")
+
+  #----------------------------------------------------------------
+
   try:
 
-    client.start()
-    sound.start()
-
-    while True:
-      sleep(1)
+    asyncio.run(
+      coplanar_nations_client(
+        host=args.host,
+        port=args.port
+      )
+    )
 
   except Exception as e:
     template = "An exception of type {0} occurred. Arguments:\n{1!r}"
     message = template.format(type(e).__name__, e.args)
     logging.error(f'Ooops! {message}')
-    
+  finally:
+    shutdown_pyaudio()
+    sys.exit(0)
+
 

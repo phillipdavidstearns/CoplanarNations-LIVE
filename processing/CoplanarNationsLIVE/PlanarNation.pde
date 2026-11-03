@@ -8,6 +8,7 @@ class PlanarNation {
     random(-5, 5),
     random(-5, 5),
     random(-5, 5),
+    random(-5, 5),
     random(-5, 5)
   };
   float noise_position = 0.0;
@@ -23,6 +24,8 @@ class PlanarNation {
   boolean edge_flicker=false;
   boolean texture_flicker=false;
   float flicker_amount=0.5;
+  float depth=0.0;
+  int draw_mode=0;
 
 
   //----------------------------------------------------------------
@@ -33,6 +36,15 @@ class PlanarNation {
     this.qty_vertices = qty_vertices;
     this.texture = texture;
     this.vertices = this.generateVertices(this.qty_vertices);
+    this.vertices_target = new float[this.vertices.length][];
+    this.vertices_morphed = new float[this.vertices.length][];
+  }
+
+  PlanarNation(float[][] vertices, PImage texture) {
+    this.morph_speed = random(0.0001, 0.01);
+    this.qty_vertices = vertices.length;
+    this.texture = texture;
+    this.vertices = vertices;
     this.vertices_target = new float[this.vertices.length][];
     this.vertices_morphed = new float[this.vertices.length][];
   }
@@ -89,41 +101,67 @@ class PlanarNation {
     textureMode(NORMAL);
     textureWrap(REPEAT);
 
+    switch(this.draw_mode) {
+    case 0:
+      for (int i = 0; i < this.vertices.length - 2; i++) {
+        beginShape();
 
-    //draw the vertices
-    beginShape();
-    if (this.texture != null && this.render_texture) {
-      texture(this.texture);
-    } else {
-      noFill();
-    }
+        // set the texture if, there is one
+        if (this.texture != null && this.render_texture) {
+          texture(this.texture);
+        } else {
+          noFill();
+        }
 
-    for (int i = 0; i < this.vertices.length - 2; i++) {
-      start = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
-      this.placeVertex(start);
-      for (int j = 1; j < 3; j++) {
-        temp = this.morph_enabled ? this.vertices_morphed[i+j] : this.vertices[i+j];
-        this.placeVertex(temp);
+        start = this.vertices[i];
+
+        this.placeVertex(start);
+
+        for (int j = 1; j < 3; j++) {
+          temp = this.vertices[i+j];
+          this.placeVertex(temp);
+        }
+
+        this.placeVertex(start);
+
+        endShape();
       }
-      this.placeVertex(start);
-    }
+      break;
+    case 1:
 
-    for (int i = 0; i < this.vertices.length; i++) {
-      temp = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
-      this.placeVertex(temp);
-    }
 
-    float[] end = this.morph_enabled ? this.vertices_morphed[0] : this.vertices[0];
-    this.placeVertex(end);
-    endShape();
+      //draw the vertices
+      beginShape();
+
+      // set the texture if, there is one
+      if (this.texture != null && this.render_texture) {
+        texture(this.texture);
+      } else {
+        noFill();
+      }
+      //place the start
+      for (int i = 0; i < this.vertices.length - 2; i++) {
+        start = this.morph_enabled ? this.vertices_morphed[i] : this.vertices[i];
+        this.placeVertex(start);
+        for (int j = 1; j < 3; j++) {
+          temp = this.morph_enabled ? this.vertices_morphed[i+j] : this.vertices[i+j];
+          this.placeVertex(temp);
+        }
+        this.placeVertex(start);
+      }
+
+      endShape();
+      break;
+    }
   }
 
   void placeVertex(float[] vertex) {
     vertex(
       width * ( vertex[0] * 2.0 * ( noise(50.0 * vertex[0], this.noise_offset[0] - this.noise_position) - 0.5)),
       width * ( vertex[1] * 2.0 * ( noise(-50.0 * vertex[1], this.noise_offset[1] + this.noise_position) - 0.5)),
-      vertex[2] * 2.0 * ( noise(50.0 * vertex[2], this.noise_offset[2] - this.noise_position) - 0.5),
-      vertex[3] * 2.0 * ( noise(-50.0 * vertex[3], this.noise_offset[3] + this.noise_position) - 0.5)
+      this.depth * ( vertex[2] * 2.0 * ( noise(-50.0 * vertex[2], this.noise_offset[2] + this.noise_position) - 0.5)),
+      vertex[3] * 2.0 * ( noise(50.0 * vertex[3], this.noise_offset[3] - this.noise_position) - 0.5),
+      vertex[4] * 2.0 * ( noise(-50.0 * vertex[4], this.noise_offset[4] + this.noise_position) - 0.5)
       );
   }
 
@@ -152,10 +190,11 @@ class PlanarNation {
 
   float[] generateRandomVertex() {
     return new float[]{
-      random(-1, 1),
-      random(-1, 1),
-      random(-1, 1),
-      random(-1, 1)
+      random(-1, 1), //x
+      random(-1, 1), //y
+      random(-1, 1), //z
+      random(-1, 1), //u
+      random(-1, 1)  //v
     };
   }
   //----------------------------------------------------------------
@@ -172,4 +211,25 @@ class PlanarNation {
 
     return this;
   }
+}
+
+
+//================================================================
+
+float[][] generateVertices(int _qty_vertices) {
+  float[][] new_vertices = new float[_qty_vertices][];
+  for (int i = 0; i < _qty_vertices; i++) {
+    new_vertices[i] = generateRandomVertex();
+  }
+  return new_vertices;
+}
+
+float[] generateRandomVertex() {
+  return new float[]{
+    random(-1, 1), //x
+    random(-1, 1), //y
+    random(-1, 1), //z
+    random(-1, 1), //u
+    random(-1, 1)  //v
+  };
 }

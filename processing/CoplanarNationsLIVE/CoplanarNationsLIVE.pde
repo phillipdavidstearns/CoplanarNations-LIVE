@@ -13,6 +13,7 @@ Light light1;
 Voices voices;
 
 int qty_vertices = 32;
+float[][] verts = generateVertices(qty_vertices);
 
 //================================================================
 
@@ -30,7 +31,10 @@ void setup() {
 
   server = new Server(this, 1337);
 
+  //set up the camera object
   camera1 = new Camera();
+
+  //setup the light object
   light1 = new Light(new PVector(
     0.0, 0.0, 100.0
     ));
@@ -81,7 +85,6 @@ void draw() {
   background(0);
 
   camera1.update();
-
   light1.update();
   light1.light();
 
@@ -98,66 +101,4 @@ void draw() {
   voices.render(pixels);
   voices.update();
   updatePixels();
-}
-
-//================================================================
-// Network Functions:
-//----------------------------------------------------------------
-// handleClient()
-// Attempts to read messages from connected client
-// If a connected client sends a decodable string, it's parsed as JSON
-
-void handleClient() {
-  try {
-    client = server.available();
-    if (client == null) return;
-
-    String message = client.readString();
-    if (message == null) return;
-
-    JSONObject json = parseJSONObject(message);
-    if (json == null) {
-      println("JSONObject could not be parsed");
-      return;
-    }
-
-    JSONObject response = processJSON(json);
-    if (response == null) return;
-
-    client.write(response.toString());
-  }
-  catch(Exception e) {
-    println("Exception caught @ handleClient(): " + e);
-    print(e.toString());
-    client.stop();
-    server.disconnect(client);
-  }
-}
-
-//----------------------------------------------------------------
-// processJSON()
-// For now, there's just a basic check to see if it's a request for frame data.
-// If so, then grab the pixel data and return it
-
-JSONObject processJSON(JSONObject json) {
-  try {
-    String type = json.getString("type");
-    String parameter = json.getString("parameter");
-    if (type.equals("get") && parameter.equals("frames")) {
-      JSONObject response = new JSONObject();
-      int frames = json.getInt("frame_count");
-      int[] data = voices.getPixelData(pixels, frames);
-      if (data == null) return null;
-      JSONArray json_data = new JSONArray();
-      for (int i = 0; i < frames; i++) {
-        json_data.setInt(i, data[i]);
-      }
-      response.setJSONArray("data", json_data);
-      return response;
-    }
-  }
-  catch (Exception e) {
-    println("Exception caught @ processJSON(): " + e);
-  }
-  return null;
 }

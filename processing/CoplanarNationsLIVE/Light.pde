@@ -91,6 +91,17 @@ class Light {
     this.do_position = true;
   }
 
+  void setPosition(PVector _position, boolean instant) {
+    if (instant) {
+      this.position = this.position_lerp.copy();
+      this.position = _position;
+      this.position_target = this.position.copy();
+      this.position_lerp = this.position.copy();
+    } else {
+      this.setPosition(_position);
+    }
+  }
+
   void position_light() {
 
     if (this.position_progress < 1.0 && this.do_position) {

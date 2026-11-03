@@ -52,24 +52,27 @@ class Voices {
     }
   }
 
-  int[] getPixelData(int[] _pixels, int _qty) {
+  byte[] getPixelData(int[] _pixels, int _qty) {
     try {
-      int[] data = new int[_qty];
-      int[] temp = new int[_qty];
+      byte[] data = new byte[_qty];
+      byte[] temp = new byte[_qty];
       for (int i = 0; i < this.voices.size(); i++) {
         Voice v = this.voices.get(i);
 
         if (v == null) return null;
 
-        temp = v.getPixelData(_pixels, _qty);
-        for (int j = 0; j < _qty; j++) {
-          if (i == 0) {
-            data[j] |= temp[j];
-          } else {
-            data[j] ^= temp[j];
+        if ( !v.mute) {
+          temp = v.getPixelData(_pixels, _qty);
+          for (int j = 0; j < _qty; j++) {
+            if (i == 0) {
+              data[j] |= temp[j];
+            } else {
+              data[j] ^= temp[j];
+            }
           }
         }
       }
+
       return data;
     }
     catch (Exception e) {
@@ -117,9 +120,9 @@ class Voice {
   float size_step = 0.0125;
 
   // Experimental pitch variation
-  float warble_amount = 0.05;
+  float warble_amount = 0.025;
   float warble_rate = 0.0025;
-  float warble_offset = random(-1, 1);
+  float warble_offset = random(-3, 3);
 
   Voice(String[][] _scale) {
     this.register = new Register();
@@ -133,9 +136,10 @@ class Voice {
     int octave_index = floor(random(this.scale.length));
     int note_index = floor(random(this.scale[octave_index].length));
     String note_name = this.scale[octave_index][note_index];
-    this.size_progress = 0.0;
-    this.start_size = this.size;
+    this.size_progress = 1.0;
+    this.start_size = notes.get(note_name);
     this.end_size = notes.get(note_name);
+    this.size = notes.get(note_name);
   }
 
   void random_note() {
@@ -165,12 +169,13 @@ class Voice {
 
     this.size_progress = constrain(this.size_progress, 0.0, 1.0);
 
-    this.size = round(lerp(
+    this.size = round(
+      lerp(
       this.start_size,
       this.end_size,
       this.ease(this.size_progress, this.base)
-      ) +
-      (this.size * this.warble_amount * 2 * (noise(frameCount * this.warble_rate + this.warble_offset)-0.5))
+      )
+      + (this.size * this.warble_amount * 2 * (noise(frameCount * this.warble_rate + this.warble_offset)-0.5))
       );
 
     if (this.size_progress < 1) this.size_progress += this.size_step;
@@ -279,19 +284,18 @@ class Voice {
     }
   }
 
-  int[] getPixelData(int[] _pixels, int _qty) {
+  byte[] getPixelData(int[] _pixels, int _qty) {
 
-    int[] line = new int[_qty];
+    byte[] line = new byte[_qty];
     int start_pixel = this.getStart();
     int line_position = this.getPosition();
 
     int pixel = color(0);
-    int value = 0;
+    int value = 128;
 
     for (int l = 0; l < _qty; l++) {
-      if (this.mute) {
-        value = 127;
-      } else {
+      if (!this.mute) {
+
         this.pixel_index_offset = (l + this.last_pixel_index_offset) % this.size;
         this.pixel_index = this.pixel_index_offset + start_pixel;
 
@@ -317,7 +321,7 @@ class Voice {
         }
       }
 
-      line[l] = value;
+      line[l] = byte(value);
     }
 
     this.last_pixel_index_offset = this.pixel_index_offset;
