@@ -1,5 +1,6 @@
 //================================================================
 // Voices
+//================================================================
 // A helper class to manage multiple Voice objects
 
 class Voices {
@@ -91,11 +92,14 @@ class Voices {
 }
 
 //================================================================
+// Voice
+//================================================================
 
 class Voice {
   Register register;
   PVector position;
   PVector velocity;
+  int zero_value = 128;
 
   String orientation = "horizontal";
   int mode = 0;
@@ -226,8 +230,8 @@ class Voice {
 
         this.step_count=0;
       }
-      this.mute = random(1) < 0.25;
-      if (random(1) < 0.75) {
+      this.mute = random(1) < 0.125;
+      if (random(1) < 1.0) {
         this.register.lfsr_left();
       }
       this.step_count+=1;
@@ -331,7 +335,7 @@ class Voice {
     int line_position = this.getPosition();
 
     int pixel = color(0);
-    int value = 0;
+    int value = this.zero_value;
 
     for (int l = 0; l < _qty; l++) {
       if (!this.mute) {

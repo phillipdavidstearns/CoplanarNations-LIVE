@@ -16,7 +16,9 @@ from buffer import Buffer
 # Signal Handler / shutdown procedure
 
 def signalHandler(signum, frame):
+
   logging.info(f'Caught termination signal: {signum}')
+
   try:
     shutdown_pyaudio()
   except Exception as e:
@@ -30,9 +32,13 @@ def signalHandler(signum, frame):
 #================================================================
 
 # Closes the audio stream
+
 def close_audio_stream():
-  global audio_stream
+
   logging.debug(f"Closing audio stream.")
+
+  global audio_stream
+
   if audio_stream:
     audio_stream.close()
     audio_stream = None
@@ -40,9 +46,13 @@ def close_audio_stream():
 #----------------------------------------------------------------
 
 # Terminates the PyAudio session and releases resources
+
 def terminate_pyaudio():
+
   logging.debug(f"Terminating PyAudio Session.")
+
   global pyaudio_obj
+
   if pyaudio_obj:
     pyaudio_obj.terminate()
     pyaudio_obj = None
@@ -51,10 +61,43 @@ def terminate_pyaudio():
 
 # Closes the active record stream and terminates pyaudio pbject
 # Resets global variables to None
+
 def shutdown_pyaudio():
+
   logging.info(f"Shutting down PyAudio.")
+
   close_audio_stream()
   terminate_pyaudio()
+
+#----------------------------------------------------------------
+
+# Creates instances of PyAudio and PyAudio.Stream objects.
+# Called when a TCP network connection is establish with the Processing server.
+# When there are writeable frames available, they are requested from the server.
+
+def initialize_audio_stream():
+
+  logging.debug("Initializing PyAudio Device.")
+
+  global pyaudio_obj, audio_stream
+
+  buffer.clear()
+
+  try:
+    pyaudio_obj = pyaudio.PyAudio()
+    audio_stream = pyaudio_obj.open(
+      format=FORMAT,
+      channels=CHANNELS,
+      rate=RATE,
+      frames_per_buffer=BLOCK_SIZE,
+      output=True,
+      output_device_index=DEVICE
+    )
+
+    logging.info("PyAudio Device Initialized.")
+  except Exception as e:
+    logging.error(f"While inializing audio device: {e}")
+    sys.exit(1)
 
 #================================================================
 # asyncio TCP client used to connect to server hosted by Processing Sketch
@@ -66,6 +109,7 @@ def shutdown_pyaudio():
 # - extract audio data from the buffer to hand off to the audio stream
 
 async def coplanar_nations_client(host='localhost', port=12345):
+
   logging.info(f"Starting network client.")
 
   global network_writer, network_reader
@@ -127,32 +171,6 @@ async def coplanar_nations_client(host='localhost', port=12345):
         network_writer = None
         network_reader = None
         shutdown_pyaudio()
-
-#================================================================
-# Creates instances of PyAudio and PyAudio.Stream objects.
-# Called when a TCP network connection is establish with the Processing server.
-# When there are writeable frames available, they are requested from the server.
-
-def initialize_audio_stream():
-  global pyaudio_obj, audio_stream
-
-  buffer.clear()
-
-  try:
-    pyaudio_obj = pyaudio.PyAudio()
-    audio_stream = pyaudio_obj.open(
-      format=FORMAT,
-      channels=CHANNELS,
-      rate=RATE,
-      frames_per_buffer=BLOCK_SIZE,
-      output=True,
-      output_device_index=DEVICE
-    )
-
-    logging.info("PyAudio Device Initialized")
-  except Exception as e:
-    logging.error(f"While inializing audio device: {e}")
-    sys.exit(1)
 
 #================================================================
 # Sets up argument parsing from cli
@@ -253,15 +271,21 @@ if __name__ == "__main__":
   BLOCK_SIZE = args.blocksize
   DEVICE = args.device
 
+  # PyAudio objects
   pyaudio_obj = None
   audio_stream = None
+
+  # asyncio network client objects used for communication with the Processing server
   network_writer = None
   network_reader = None
+
+  # custom FIFO-like buffer for audio data recevied from the Processing server
   buffer = Buffer(zero_pad=False)
 
   #----------------------------------------------------------------
   # Sanity check that our variables are set as we wish
 
+  # PyAudio variables
   logging.info(f"Width: {WIDTH}")
   logging.info(f"Format: {FORMAT}")
   logging.info(f"Channels: {CHANNELS}")
@@ -269,6 +293,7 @@ if __name__ == "__main__":
   logging.info(f"Block Size: {BLOCK_SIZE}")
   logging.info(f"Device Id: {DEVICE}")
 
+  # Server variables
   logging.info(f"Host: {args.host}")
   logging.info(f"Port: {args.port}")
 
@@ -276,6 +301,7 @@ if __name__ == "__main__":
 
   try:
 
+    # run the client until an unhandled exception occurs or signal is caught 
     asyncio.run(
       coplanar_nations_client(
         host=args.host,

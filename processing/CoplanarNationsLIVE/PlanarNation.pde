@@ -3,7 +3,6 @@ class PlanarNation {
   float[][] vertices;
   float[][] vertices_morphed;
   float[][] vertices_target;
-  //float scale = 1920.0;
   float[] noise_offset = {
     random(-5, 5),
     random(-5, 5),
@@ -215,6 +214,8 @@ class PlanarNation {
 
 
 //================================================================
+// Helper functions for texting out some ideas for drawing the surfaces in different ways
+
 
 float[][] generateVertices(int _qty_vertices) {
   float[][] new_vertices = new float[_qty_vertices][];

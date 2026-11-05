@@ -8,7 +8,7 @@ class Buffer:
 
   #----------------------------------------------------------------
 
-  def __init__(self, size_limit=7056000, zero_pad=True, zero_value=0):
+  def __init__(self, size_limit=7056000, zero_pad=True, zero_value=128):
     self.buffer = bytearray()
     self.size_limit = size_limit
     self.zero_value = zero_value

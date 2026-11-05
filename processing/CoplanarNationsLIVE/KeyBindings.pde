@@ -3,42 +3,65 @@ boolean shift = false;
 boolean ctrl = false;
 boolean opt = false;
 boolean cmd = false;
+
 float rotation_step = PI/64.0;
 float translation_step = 100;
+
 int min_voices = 0;
 int max_voices = 20;
 
+//================================================================
+// KEY RELEASED
+
 void keyReleased() {
   //println("released keyCode:" + keyCode + ", key: " + key);
+
+  //----------------------------------------------------------------
+  // Detect when SHIFT, CTRL, CMD, or OPT are  released
   if (keyCode == 16) shift = false;
   if (keyCode == 17) ctrl = false;
   if (keyCode == 18) opt = false;
   if (keyCode == 157) cmd = false;
 }
 
+//================================================================
+// KEY PRESSED
+
+
 void keyPressed() {
   //println("pressed keyCode:" + keyCode + ", key: " + key);
+
+  //----------------------------------------------------------------
+  // Detect when SHIFT, CTRL, CMD, or OPT are pressed
   if (keyCode == 16) shift = true;
   if (keyCode == 17) ctrl = true;
   if (keyCode == 18) opt = true;
   if (keyCode == 157) cmd = true;
 
+  //================================================================
+  // Detect non-character keys
   switch(keyCode) {
-  case 32: // SCAPE_BAR turn off PlanarNation visibility and animation
+
+    //----------------------------------------------------------------
+    // SPACE_BAR
+  case 32:
 
     if (shift) {
 
+      //turn off PlanarNation visibility
       nationA.render_edges = false;
       nationA.render_texture = false;
 
       nationB.render_edges = false;
       nationB.render_texture = false;
 
+      // silence voices
       for (Voice v : voices.voices) {
         v.mute = true;
       }
     }
 
+    //stop flickering and animation
     nationA.edge_flicker = false;
     nationA.texture_flicker = false;
     nationA.do_animate = false;
@@ -46,146 +69,212 @@ void keyPressed() {
     nationB.edge_flicker = false;
     nationB.texture_flicker = false;
     nationB.do_animate = false;
-
     break;
-  case 37: // left
+
+    //----------------------------------------------------------------
+    // LEFT_ARROW
+  case 37:
     if (shift) {
-      camera1.setRotationZ(camera1.rotation_target.z + rotation_step);
+      cameras.get_active_camera().setRotationZ(cameras.get_active_camera().rotation_target.z + rotation_step);
     } else {
-      camera1.setRotationY(camera1.rotation_target.y + rotation_step);
+      cameras.get_active_camera().setRotationY(cameras.get_active_camera().rotation_target.y + rotation_step);
     }
     break;
+
+    //----------------------------------------------------------------
+    // UP_ARROW
   case 38: // up
-    camera1.setRotationX(camera1.rotation_target.x - rotation_step);
+    cameras.get_active_camera().setRotationX(cameras.get_active_camera().rotation_target.x - rotation_step);
     break;
+
+    //----------------------------------------------------------------
+    // RIGHT_ARROW
   case 39: // right
     if (shift) {
-      camera1.setRotationZ(camera1.rotation_target.z - rotation_step);
+      cameras.get_active_camera().setRotationZ(cameras.get_active_camera().rotation_target.z - rotation_step);
     } else {
-      camera1.setRotationY(camera1.rotation_target.y - rotation_step);
+      cameras.get_active_camera().setRotationY(cameras.get_active_camera().rotation_target.y - rotation_step);
     }
     break;
+
+    //----------------------------------------------------------------
+    // DOWN_ARROW
   case 40: // down
-    camera1.setRotationX(camera1.rotation_target.x + rotation_step);
+    cameras.get_active_camera().setRotationX(cameras.get_active_camera().rotation_target.x + rotation_step);
     break;
   }
 
+  //================================================================
   switch(key) {
 
+
+    //================================================================
+    // Camera Controls
+
   case 'w':
-    camera1.setTranslationY(camera1.translation_target.y + translation_step);
+    if (ctrl || cmd) {
+    }
+    cameras.get_active_camera().setTranslationY(cameras.get_active_camera().translation_target.y + translation_step);
     break;
   case 'a':
-    camera1.setTranslationX(camera1.translation_target.x + translation_step);
+    cameras.get_active_camera().setTranslationX(cameras.get_active_camera().translation_target.x + translation_step);
     break;
   case 's':
-    camera1.setTranslationY(camera1.translation_target.y - translation_step);
+    cameras.get_active_camera().setTranslationY(cameras.get_active_camera().translation_target.y - translation_step);
     break;
   case 'd':
-    camera1.setTranslationX(camera1.translation_target.x - translation_step);
+    cameras.get_active_camera().setTranslationX(cameras.get_active_camera().translation_target.x - translation_step);
     break;
 
   case 'W':
-    camera1.setPositionY(camera1.position_target.y + translation_step);
+    cameras.get_active_camera().setPositionY(cameras.get_active_camera().position_target.y + translation_step);
     break;
   case 'A':
-    camera1.setPositionX(camera1.position_target.x + translation_step);
+    cameras.get_active_camera().setPositionX(cameras.get_active_camera().position_target.x + translation_step);
     break;
   case 'S':
-    camera1.setPositionY(camera1.position_target.y - translation_step);
+    cameras.get_active_camera().setPositionY(cameras.get_active_camera().position_target.y - translation_step);
     break;
   case 'D':
-    camera1.setPositionX(camera1.position_target.x - translation_step);
+    cameras.get_active_camera().setPositionX(cameras.get_active_camera().position_target.x - translation_step);
     break;
 
-    // Camera Z
+
+  case 'E': // Reset camera center
+    cameras.get_active_camera().setCenter(new PVector(), true);
+    break;
+  case 'e': // Reset camera center
+    cameras.get_active_camera().randomize_center();
+    break;
+  case 'Q':
+    cameras.get_active_camera().setPosition(new PVector(0.0, 0.0, cameras.get_active_camera().position_lerp.z));
+    break;
+  case 'q':
+    cameras.get_active_camera().randomize_position();
+    break;
+  case 'z':
+    cameras.get_active_camera().randomize_translation();
+    break;
+  case 'Z':
+    cameras.get_active_camera().setTranslation(new PVector());
+    break;
+  case 'x':
+    cameras.get_active_camera().randomize_rotation();
+    break;
+  case 'X':
+    cameras.get_active_camera().setRotation(new PVector());
+    break;
+  case 'c':
+    cameras.get_active_camera().randomize_perspective();
+    break;
+  case 'C':
+    cameras.get_active_camera().fov_target = PI/4.0;
+    break;
+
   case '1':
     if (ctrl || cmd) {
       nationA = nations[0];
       nationB = nations[1];
+    } else if (opt) {
+      println("Camera 1");
+      cameras.set_active_camera(0);
     } else {
-      camera1.setPositionZ(10);
+      cameras.get_active_camera().setPositionZ(10);
     }
     break;
   case '2':
     if (ctrl || cmd) {
       nationA = nations[2];
       nationB = nations[3];
+    } else if (opt) {
+      println("Camera 2");
+      cameras.set_active_camera(1);
     } else {
-      camera1.setPositionZ(20);
+      cameras.get_active_camera().setPositionZ(20);
     }
     break;
   case '3':
     if (ctrl || cmd) {
       nationA = nations[4];
       nationB = nations[5];
+    } else if (opt) {
+      println("Camera 3");
+      cameras.set_active_camera(2);
     } else {
-      camera1.setPositionZ(40);
+      cameras.get_active_camera().setPositionZ(40);
     }
     break;
   case '4':
-    camera1.setPositionZ(80);
+    if (opt) {
+      println("Camera 4");
+      cameras.set_active_camera(3);
+    } else {
+      cameras.get_active_camera().setPositionZ(80);
+    }
     break;
   case '5':
-    camera1.setPositionZ(160);
+    cameras.get_active_camera().setPositionZ(160);
     break;
   case '6':
-    camera1.setPositionZ(320);
+    cameras.get_active_camera().setPositionZ(320);
     break;
   case '7':
-    camera1.setPositionZ(640);
+    cameras.get_active_camera().setPositionZ(640);
     break;
   case '8':
-    camera1.setPositionZ(1280);
+    cameras.get_active_camera().setPositionZ(1280);
     break;
   case '9':
-    camera1.setPositionZ(2560);
+    cameras.get_active_camera().setPositionZ(2560);
     break;
   case '0':
-    camera1.setPositionZ(5120);
+    cameras.get_active_camera().setPositionZ(5120);
     break;
 
   case '!':
-    camera1.setPositionZ(10, true);
+    cameras.get_active_camera().setPositionZ(10, true);
     break;
   case '@':
-    camera1.setPositionZ(20, true);
+    cameras.get_active_camera().setPositionZ(20, true);
     break;
   case '#':
-    camera1.setPositionZ(40, true);
+    cameras.get_active_camera().setPositionZ(40, true);
     break;
   case '$':
-    camera1.setPositionZ(80, true);
+    cameras.get_active_camera().setPositionZ(80, true);
     break;
   case '%':
-    camera1.setPositionZ(160, true);
+    cameras.get_active_camera().setPositionZ(160, true);
     break;
   case '^':
-    camera1.setPositionZ(320, true);
+    cameras.get_active_camera().setPositionZ(320, true);
     break;
   case '&':
-    camera1.setPositionZ(640, true);
+    println("SHIFT+7");
+    cameras.get_active_camera().setPositionZ(640, true);
     break;
   case '*':
-    camera1.setPositionZ(1280, true);
+    cameras.get_active_camera().setPositionZ(1280, true);
     break;
   case '(':
-    camera1.setPositionZ(2560, true);
+    cameras.get_active_camera().setPositionZ(2560, true);
     break;
   case ')':
-    camera1.setPositionZ(5120, true);
+    cameras.get_active_camera().setPositionZ(5120, true);
     break;
-
 
 
   case 'M':
-    camera1.orbit_camera = !camera1.orbit_camera;
-    println("orbit camera: "+ camera1.orbit_camera);
-    if (camera1.orbit_camera) {
-      camera1.randomize_orbit();
-      camera1.orbit_rate = random(0.001, 0.01);
+    cameras.get_active_camera().orbit_camera = !cameras.get_active_camera().orbit_camera;
+    println("orbit camera: "+ cameras.get_active_camera().orbit_camera);
+    if (cameras.get_active_camera().orbit_camera) {
+      cameras.get_active_camera().randomize_orbit();
+      cameras.get_active_camera().orbit_rate = random(0.001, 0.01);
     }
     break;
+
+    //================================================================
+    // PlanarNation Controls
 
   case 'm':
     verts = generateVertices(qty_vertices);
@@ -194,7 +283,13 @@ void keyPressed() {
     break;
 
   case'r':
-    nationA.render_texture = !nationA.render_texture;
+
+    if (ctrl || cmd) {
+      nationA.draw_mode+=1;
+      nationA.draw_mode%=2;
+    } else {
+      nationA.render_texture = !nationA.render_texture;
+    }
     if (!nationA.render_texture) nationA.randomizeVertices();
     break;
   case't':
@@ -202,6 +297,7 @@ void keyPressed() {
     if (ctrl || cmd) {
       nationA.draw_mode+=1;
       nationA.draw_mode%=2;
+
       nationB.draw_mode+=1;
       nationB.draw_mode%=2;
     } else {
@@ -212,7 +308,13 @@ void keyPressed() {
     }
     break;
   case'y':
-    nationB.render_texture = !nationB.render_texture;
+
+    if (ctrl || cmd) {
+      nationB.draw_mode+=1;
+      nationB.draw_mode%=2;
+    } else {
+      nationB.render_texture = !nationB.render_texture;
+    }
     if (!nationB.render_texture) nationB.randomizeVertices();
     break;
 
@@ -298,6 +400,9 @@ void keyPressed() {
     nationB.flicker_amount = random(0.01, 0.99);
     break;
 
+    //================================================================
+    // Voice Controls
+
   case 'U': // all voices on
     for (Voice v : voices.voices) {
       v.random_pitch();
@@ -326,7 +431,7 @@ void keyPressed() {
 
   case 'o': // all voices on
     if (ctrl || cmd) {
-      for (Voice v : voices.voices){
+      for (Voice v : voices.voices) {
         v.arpeggiate = !v.arpeggiate;
       }
     } else {
@@ -449,53 +554,25 @@ void keyPressed() {
     }
     break;
 
+    //================================================================
+    // Light Controls
+
   case ']':
-    light1.setPositionZ(
-      constrain(light1.position_target.z - 10, 100, 500)
+    lights.get(0).setPositionZ(
+      constrain(lights.get(0).position_target.z - 100, 0, 1000)
       );
     break;
   case '}':
-    light1.setPositionZ(
-      constrain(light1.position_target.z + 10, 100, 500)
+    lights.get(0).setPositionZ(
+      constrain(lights.get(0).position_target.z + 100, 0, 1000)
       );
     break;
 
   case '\\':
-    light1.setPositionZ(random(100, 500));
+    lights.get(0).setPositionZ(random(100, 500));
     break;
   case '|':
-    light1.setPositionZ(250);
-    break;
-
-  case 'E':
-    camera1.setCenter(new PVector());
-    break;
-  case 'e':
-    camera1.randomize_center();
-    break;
-  case 'Q':
-    camera1.setPosition(new PVector(0.0, 0.0, camera1.position_lerp.z));
-    break;
-  case 'q':
-    camera1.randomize_position();
-    break;
-  case 'z':
-    camera1.randomize_translation();
-    break;
-  case 'Z':
-    camera1.setTranslation(new PVector());
-    break;
-  case 'x':
-    camera1.randomize_rotation();
-    break;
-  case 'X':
-    camera1.setRotation(new PVector());
-    break;
-  case 'c':
-    camera1.randomize_perspective();
-    break;
-  case 'C':
-    camera1.fov_target = PI/4.0;
+    lights.get(0).setPositionZ(250);
     break;
   }
 }

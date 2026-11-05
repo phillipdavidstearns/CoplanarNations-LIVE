@@ -6,11 +6,9 @@ PlanarNation[] nations = new PlanarNation[6];
 PlanarNation nationA;
 PlanarNation nationB;
 
-Camera camera1;
-
-Light light1;
-
 Voices voices;
+Cameras cameras;
+Lights lights;
 
 int qty_vertices = 32;
 float[][] verts = generateVertices(qty_vertices);
@@ -19,25 +17,25 @@ float[][] verts = generateVertices(qty_vertices);
 
 void setup() {
 
+  //----------------------------------------------------------------
+  // Environmental settings
+
   fullScreen(P3D, 2);
   noCursor();
-
-  //size(1920, 1080, P3D);
-
   noSmooth();
   pixelDensity(1);
   background(0);
   frameRate(30);
 
+  //----------------------------------------------------------------
+
   server = new Server(this, 1337);
 
   //set up the camera object
-  camera1 = new Camera();
+  cameras = new Cameras(4);
 
   //setup the light object
-  light1 = new Light(new PVector(
-    0.0, 0.0, 100.0
-    ));
+  lights = new Lights(1);
 
   nations[0] = new PlanarNation(
     qty_vertices,
@@ -84,9 +82,8 @@ void setup() {
 void draw() {
   background(0);
 
-  camera1.update();
-  light1.update();
-  light1.light();
+  cameras.update();
+  lights.update();
 
   nationA.update();
   nationA.render();
