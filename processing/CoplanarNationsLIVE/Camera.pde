@@ -2,16 +2,27 @@
 // Cameras
 
 class Cameras {
+
+  //================================================================
+  // Fields
+
   ArrayList<Camera> cameras = new ArrayList<Camera>();
   int active_camera = 0;
+
+  //================================================================
+  // Constructors
 
   Cameras(int qty) {
     for (int i = 0; i < qty; i++) {
       Camera c = new Camera();
-      c.randomize();
+      c.randomize_translation(true);
+      c.setRotationZ(random(-PI, PI), true);
       cameras.add(c);
     }
   }
+
+  //================================================================
+  // Methods
 
   int size() {
     return this.cameras.size();
@@ -33,10 +44,37 @@ class Cameras {
   Camera get_active_camera() {
     return this.cameras.get(this.active_camera);
   }
+
+  Camera get(int index) {
+    return this.cameras.get(constrain(index, 0, this.size()));
+  }
 }
 
 //================================================================
 // Camera
+/*
+
+ camera()
+ - Eye - x,y,z location of the camera AKA position
+ - Center - x,y,z location of the target (where the eye is pointing)
+ - Up - specify which axis is up
+ 
+ perspective()
+ - FOV
+ - Apect Ratio
+ - zNear
+ - zFar
+ 
+ note: the following are applied to the matrix after camera parameters are set
+ 
+ translation: shifting the camera without changing the eye/position or center coordinates
+ 
+ rotation
+ - pitch = x-axis
+ - yaw = y-axis
+ - roll = z-axis
+ */
+
 
 class Camera {
 
@@ -101,7 +139,7 @@ class Camera {
 
   Camera() {
 
-    this.position = new PVector(0.0, 0.0, width/2.0);
+    this.position = new PVector(0.0, 0.0, 1.0);
     this.position_lerp = position.copy();
     this.position_target = position.copy();
 
@@ -113,7 +151,7 @@ class Camera {
     this.rotation_lerp = rotation.copy();
     this.rotation_target = rotation.copy();
 
-    this.translation = new PVector();
+    this.translation = new PVector(0.0, 0.0, -100);
     this.translation_lerp = translation.copy();
     this.translation_target = translation.copy();
 
@@ -135,21 +173,12 @@ class Camera {
   //================================================================
   // Methods
 
-
-
-  //----------------------------------------------------------------
-
-  void randomize() {
-    this.randomize_position(true);
-    this.randomize_center(true);
-  }
-
   //----------------------------------------------------------------
 
   void update() {
 
-    this.position_camera();
-    this.center_camera();
+    //this.position_camera();
+    //this.center_camera();
     this.animate_perspective();
     this.translate_camera();
     this.rotate_camera();
@@ -180,9 +209,9 @@ class Camera {
       this.translation_lerp.z
       );
 
-    rotateX(this.rotation_lerp.x);
-    rotateY(this.rotation_lerp.y);
-    rotateZ(this.rotation_lerp.z);
+    rotateX(this.rotation_lerp.x); // pitch
+    rotateY(this.rotation_lerp.y); // yaw
+    rotateZ(this.rotation_lerp.z); // roll
 
     endCamera();
   }
@@ -213,8 +242,18 @@ class Camera {
   //----------------------------------------------------------------
 
   void set_fov(float radians) {
-    this.fov_target = radians;
+    this.fov_target = constrain(radians, PI/128.0, PI);
     this.perspective_progress = 0.0;
+  }
+
+  void set_fov(float radians, boolean instant) {
+    if ( instant ) {
+      this.fov = constrain(radians, PI/128.0, PI);
+      this.fov_target = this.fov;
+      this.perspective_progress = 1.0;
+    } else {
+      set_fov(radians);
+    }
   }
 
   void animate_perspective() {
@@ -230,19 +269,44 @@ class Camera {
     this.fov_target = random(PI/16.0, PI/2.0);
   }
 
+  void randomize_perspective(boolean instant) {
+    if (instant) {
+      this.perspective_progress = 1.0;
+      this.fov = random(PI/16.0, PI/2.0);
+      this.fov_target = this.fov;
+    } else {
+      this.randomize_perspective();
+    }
+  }
+
+  void reset_clipping() {
+    float cameraZ = ((height/2.0) / tan(PI*60.0/360.0));
+    this.set_z_near(cameraZ/10.0);
+    this.set_z_far(cameraZ*10.0);
+  }
+
   void randomize_clipping() {
-    this.set_z_near(random(0.0001, 100));
-    this.set_z_far(random(1000, 100000));
+    this.set_z_near(random(0.001, 10));
+    this.set_z_far(random(5000, 10000));
+  }
+
+  void randomize_z_near() {
+    this.set_z_near(random(0.001, 10));
+  }
+
+  void randomize_z_far() {
+    this.set_z_far(random(5000, 10000));
   }
 
   void set_z_near(float value) {
-    this.z_near = constrain(value, 0.0001, 100);
+    println("set_z_near: " + value);
+    this.z_near = constrain(value, 0.001, 10);
   }
 
   void set_z_far(float value) {
-    this.z_far = constrain(value, 1000, 100000);
+    println("set_z_far: " + value);
+    this.z_far = constrain(value, 5000, 10000);
   }
-
 
   //----------------------------------------------------------------
   // Position Camera
@@ -345,6 +409,27 @@ class Camera {
     }
   }
 
+  void setCenterX(float x) {
+    this.center = this.center_lerp.copy();
+    this.center.x = x;
+    this.center_target = this.center.copy();
+    this.center_progress = 0.0;
+  }
+
+  void setCenterY(float y) {
+    this.center = this.center_lerp.copy();
+    this.center.y = y;
+    this.center_target = this.center.copy();
+    this.center_progress = 0.0;
+  }
+
+  void setCenterZ(float z) {
+    this.center = this.center_lerp.copy();
+    this.center.z = z;
+    this.center_target = this.center.copy();
+    this.center_progress = 0.0;
+  }
+
   void setCenter(PVector _center) {
     this.center = this.center_lerp.copy();
     this.center_target = _center.copy();
@@ -398,10 +483,25 @@ class Camera {
     }
   }
 
+  void apply_rotation() {
+    this.rotation_lerp = this.rotation.copy();
+    this.rotation_target = this.rotation.copy();
+    this.rotation_progress = 1.0;
+  }
+
   void setRotationX(float x) {
     this.rotation = this.rotation_lerp.copy();
     this.rotation_target.x = constrain(x, -7*PI/16.0, 7*PI/16.0);
     this.rotation_progress = 0.0;
+  }
+
+  void setRotationX(float x, boolean instant) {
+    if (instant) {
+      this.rotation.x = constrain(x, -7*PI/16.0, 7*PI/16.0);
+      this.apply_rotation();
+    } else {
+      this.setRotationX(x);
+    }
   }
 
   void setRotationY(float y) {
@@ -410,10 +510,29 @@ class Camera {
     this.rotation_progress = 0.0;
   }
 
+  void setRotationY(float y, boolean instant) {
+    if (instant) {
+      this.rotation.y = constrain(y, -7*PI/16.0, 7*PI/16.0);
+      this.apply_rotation();
+    } else {
+      this.setRotationY(y);
+    }
+  }
+
   void setRotationZ(float z) {
     this.rotation = this.rotation_lerp.copy();
     this.rotation_target.z =  constrain(z, -PI, PI);
     this.rotation_progress = 0.0;
+  }
+
+  void setRotationZ(float z, boolean instant) {
+
+    if (instant) {
+      this.rotation.z = constrain(z, -PI, PI);
+      this.apply_rotation();
+    } else {
+      this.setRotationZ(z);
+    }
   }
 
   void setRotation(PVector _rotation) {
@@ -456,22 +575,28 @@ class Camera {
 
   void randomize_translation() {
     this.setTranslation(new PVector(
-      random(-width/2.0, width/2.0),
-      random(-height/2.0, height/2.0),
-      0.0
+      random(-width/4.0, width/4.0),
+      random(-height/4.0, height/4.0),
+      -random(0.0, 2500)
       ));
   }
 
   void randomize_translation(boolean instant) {
     if (instant) {
       this.setTranslation(new PVector(
-        random(-width/2.0, width/2.0),
-        random(-height/2.0, height/2.0),
-        0.0
+        random(-width/4.0, width/4.0),
+        random(-height/4.0, height/4.0),
+        -random(0.0, 2500)
         ), true);
     } else {
       this.randomize_translation();
     }
+  }
+
+  void apply_translation() {
+    this.translation_lerp = this.translation.copy();
+    this.translation_target = this.translation.copy();
+    this.translation_progress = 1.0;
   }
 
   void setTranslationX(float x) {
@@ -480,16 +605,43 @@ class Camera {
     this.translation_progress = 0.0;
   }
 
+  void setTranslationX(float x, boolean instant) {
+    if (instant) {
+      this.translation.x = x;
+      this.apply_translation();
+    } else {
+      this.setTranslationX(x);
+    }
+  }
+
   void setTranslationY(float y) {
     this.translation = this.translation_lerp.copy();
     this.translation_target.y = y;
     this.translation_progress = 0.0;
   }
 
+  void setTranslationY(float y, boolean instant) {
+    if (instant) {
+      this.translation.y = y;
+      this.apply_translation();
+    } else {
+      this.setTranslationY(y);
+    }
+  }
+
   void setTranslationZ(float z) {
     this.translation = this.translation_lerp.copy();
-    this.translation_target.z = constrain(z, -10000, -10);
+    this.translation_target.z = constrain(z, -10000, 0.0);
     this.translation_progress = 0.0;
+  }
+
+  void setTranslationZ(float z, boolean instant) {
+    if (instant) {
+      this.translation.z = constrain(z, -10000, 0.0);
+      this.apply_translation();
+    } else {
+      this.setTranslationZ(z);
+    }
   }
 
   void setTranslation(PVector _translation) {
@@ -501,9 +653,7 @@ class Camera {
   void setTranslation(PVector _translation, boolean instant) {
     if (instant) {
       this.translation = _translation;
-      this.translation_lerp = this.translation.copy();
-      this.translation_target = this.translation.copy();
-      this.translation_progress = 1.0;
+      this.apply_translation();
     } else {
       this.setTranslation(_translation);
     }
@@ -514,7 +664,6 @@ class Camera {
   }
 
   void translate_camera() {
-
     if (this.translation_progress < 1.0) {
       this.translation_progress = constrain(this.translation_progress + this.translation_rate, 0.0, 1.0);
       this.translation_lerp = new PVector(

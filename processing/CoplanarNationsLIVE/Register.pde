@@ -1,7 +1,13 @@
 class Register {
+  //================================================================
+  // Fields
+
   int register = 0;
   int length;
   int[] taps = new int[2];
+
+  //================================================================
+  // Constructors
 
   Register() {
     this.length = 16;
@@ -13,6 +19,9 @@ class Register {
     this.register = value;
     this.length = 16;
   }
+
+  //================================================================
+  // Methods
 
   void loop_left() {
     int temp = this.register >> (this.length - 1) & 0b1;

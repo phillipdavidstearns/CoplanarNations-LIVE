@@ -4,8 +4,16 @@
 // A helper class to manage multiple Voice objects
 
 class Voices {
+
+  //================================================================
+  // Fields
+
   ArrayList<Voice> voices;
   String[][] scale;
+
+
+  //================================================================
+  // Constructors
 
   Voices(int qty, String[][] _scale) {
     this.voices = new ArrayList<Voice>();
@@ -14,6 +22,9 @@ class Voices {
       voices.add(new Voice(_scale));
     }
   }
+
+  //================================================================
+  // Methods
 
   void update() {
     for (Voice v : this.voices) {
@@ -96,6 +107,10 @@ class Voices {
 //================================================================
 
 class Voice {
+
+  //================================================================
+  // Fields
+
   Register register;
   PVector position;
   PVector velocity;
@@ -133,6 +148,9 @@ class Voice {
   float warble_rate = 0.0025;
   float warble_offset = random(-3, 3);
 
+  //================================================================
+  // Constructor
+
   Voice(String[][] _scale) {
     this.register = new Register();
     this.randomize();
@@ -140,6 +158,10 @@ class Voice {
     this.scale = new String[_scale.length][];
     arrayCopy(_scale, this.scale);
   }
+
+
+  //================================================================
+  // Methods
 
   void random_scale() {
     int octave_index = floor(random(this.scale.length));

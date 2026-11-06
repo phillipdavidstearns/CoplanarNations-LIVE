@@ -2,13 +2,22 @@
 // Lights
 
 class Lights {
+  //================================================================
+  // Fields
+
   ArrayList<Light> lights = new ArrayList<Light>();
+
+  //================================================================
+  // Constructors
 
   Lights(int qty) {
     for (int i = 0; i<qty; i++) {
       lights.add(new Light());
     }
   }
+
+  //================================================================
+  // Methods
 
   void update() {
     for (Light l : this.lights) {
@@ -32,6 +41,9 @@ class Lights {
 // Light
 
 class Light {
+  //================================================================
+  // Fields
+
   color c;
   PVector position;
   PVector position_lerp;
@@ -39,25 +51,34 @@ class Light {
   float position_progress=0.0;
   float position_rate = 0.01;
 
+  //================================================================
+  // Constructors
+
   Light() {
     this.c = color(255);
     this.position = new PVector(0.0, 0.0, 1000);
-    this.position_lerp = this.position.copy();
-    this.position_target = this.position.copy();
+    this.apply_position();
   }
 
   Light(PVector _position) {
     this.c = color(255);
     this.position = _position.copy();
-    this.position_lerp = _position.copy();
-    this.position_target = _position.copy();
+    this.apply_position();
   }
 
   Light(color _c, PVector _position) {
     this.c = _c;
     this.position = _position.copy();
-    this.position_lerp = _position.copy();
-    this.position_target = _position.copy();
+    this.apply_position();
+  }
+
+  //================================================================
+  // Methods
+
+  void apply_position() {
+    this.position_lerp = this.position.copy();
+    this.position_target = this.position.copy();
+    this.position_progress = 1.0;
   }
 
   void setColor(color _c) {
@@ -105,8 +126,7 @@ class Light {
     if (instant) {
       this.position = this.position_lerp.copy();
       this.position.z = z;
-      this.position_target = this.position.copy();
-      this.position_lerp = this.position.copy();
+      this.apply_position();
     } else {
       this.setPositionZ(z);
     }
@@ -120,10 +140,8 @@ class Light {
 
   void setPosition(PVector _position, boolean instant) {
     if (instant) {
-      this.position = this.position_lerp.copy();
       this.position = _position;
-      this.position_target = this.position.copy();
-      this.position_lerp = this.position.copy();
+      this.apply_position();
     } else {
       this.setPosition(_position);
     }

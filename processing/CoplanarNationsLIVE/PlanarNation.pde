@@ -1,4 +1,8 @@
 class PlanarNation {
+
+  //================================================================
+  // Fields
+
   PImage texture;
   float[][] vertices;
   float[][] vertices_morphed;
@@ -27,7 +31,7 @@ class PlanarNation {
   int draw_mode=0;
 
 
-  //----------------------------------------------------------------
+  //================================================================
   // Constructors
 
   PlanarNation(int qty_vertices, PImage texture) {
@@ -47,6 +51,9 @@ class PlanarNation {
     this.vertices_target = new float[this.vertices.length][];
     this.vertices_morphed = new float[this.vertices.length][];
   }
+
+  //================================================================
+  // Mthods
 
   //----------------------------------------------------------------
   // update
@@ -127,8 +134,6 @@ class PlanarNation {
       }
       break;
     case 1:
-
-
       //draw the vertices
       beginShape();
 
