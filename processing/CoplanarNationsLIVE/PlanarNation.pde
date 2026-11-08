@@ -161,11 +161,11 @@ class PlanarNation {
 
   void placeVertex(float[] vertex) {
     vertex(
-      width * ( vertex[0] * 2.0 * ( noise(50.0 * vertex[0], this.noise_offset[0] - this.noise_position) - 0.5)),
-      width * ( vertex[1] * 2.0 * ( noise(-50.0 * vertex[1], this.noise_offset[1] + this.noise_position) - 0.5)),
-      this.depth * ( vertex[2] * 2.0 * ( noise(-50.0 * vertex[2], this.noise_offset[2] + this.noise_position) - 0.5)),
-      vertex[3] * 2.0 * ( noise(50.0 * vertex[3], this.noise_offset[3] - this.noise_position) - 0.5),
-      vertex[4] * 2.0 * ( noise(-50.0 * vertex[4], this.noise_offset[4] + this.noise_position) - 0.5)
+      width * ( vertex[0] * 2.0 * ( noise(vertex[1], this.noise_offset[0] - this.noise_position) - 0.5)),
+      width * ( vertex[1] * 2.0 * ( noise(vertex[2], this.noise_offset[1] + this.noise_position) - 0.5)),
+      this.depth * ( vertex[2] * 2.0 * ( noise(vertex[0], this.noise_offset[2] + this.noise_position) - 0.5)),
+      vertex[3] * 2.0 * ( noise( vertex[3], this.noise_offset[3] - this.noise_position) - 0.5),
+      vertex[4] * 2.0 * ( noise( vertex[4], this.noise_offset[4] + this.noise_position) - 0.5)
       );
   }
 
@@ -196,9 +196,9 @@ class PlanarNation {
     return new float[]{
       random(-1, 1), //x
       random(-1, 1), //y
-      random(-1, 1), //z
-      random(-1, 1), //u
-      random(-1, 1)  //v
+      random(0, 1), //z
+      random(0, 1), //u
+      random(0, 1)  //v
     };
   }
   //----------------------------------------------------------------

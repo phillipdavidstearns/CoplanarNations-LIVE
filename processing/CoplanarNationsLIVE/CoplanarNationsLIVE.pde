@@ -44,7 +44,7 @@ void setup() {
 
   nations[1] = new PlanarNation(
     qty_vertices,
-    loadImage("Flag_of_SPLM-N.png")
+    loadImage("Flag_of_the_Rapid_Support_Forces_(Sudan).png")
     );
 
   nations[2] = new PlanarNation(
@@ -68,8 +68,9 @@ void setup() {
     );
 
   populate_notes();
+
   //start off with 0 voices. press = to add one at a time, - to subtract
-  voices = new Voices(1, B_locrian);
+  voices = new Voices(0, B_locrian);
 
   nationA = nations[0];
   nationB = nations[1];
@@ -91,11 +92,9 @@ void draw() {
   nationB.update();
   nationB.render();
 
-  fill(255);
-
   loadPixels();
   handleClient();
-  voices.render(pixels);
+  voices.render();
   voices.update();
   updatePixels();
 }

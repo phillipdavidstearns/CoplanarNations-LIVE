@@ -6,24 +6,32 @@
 // If a connected client sends a decodable string, it's parsed as JSON
 
 void handleClient() {
+  String message;
+  JSONObject json = null;
+  byte[] response;
+
   try {
     client = server.available();
     if (client == null) return;
 
+    // read in strings until there's nothing left
     while (client.available() > 0) {
-      String message = client.readString();
-      if (message == null) return;
 
-      JSONObject json = parseJSONObject(message);
-      if (json == null) {
-        println("JSONObject could not be parsed");
-        return;
+      message = client.readString();
+
+      if (message != null) {
+
+        json = parseJSONObject(message);
+
+        if (json == null) {
+          println("JSONObject could not be parsed");
+          return;
+        }
+
+        response = processJSON(json);
+
+        if (response != null) client.write(response);
       }
-
-      byte[] response = processJSON(json);
-      if (response == null) return;
-
-      client.write(response);
     }
   }
   catch(Exception e) {
@@ -40,16 +48,13 @@ void handleClient() {
 // If so, then grab the pixel data and return it
 
 byte[] processJSON(JSONObject json) {
+
   try {
-    int frames = json.getInt("frame_count");
-
-    byte[] pixelData = voices.getPixelData(pixels, frames);
-    if (pixelData == null) return null;
-
-    return pixelData;
+    return voices.getPixelData(json.getInt("frame_count"));
   }
   catch (Exception e) {
     println("Exception caught @ processJSON(): " + e);
   }
+
   return null;
 }

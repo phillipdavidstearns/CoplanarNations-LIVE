@@ -4,20 +4,26 @@ boolean ctrl = false;
 boolean opt = false;
 boolean cmd = false;
 
+String voice_note_mode = "pitch";
+
 float rotation_step = PI/64.0;
 float translation_step = 100;
+float position_step = 100;
 
 int min_voices = 0;
 int max_voices = 20;
 
-float zMin = 0.0;
-float zMax = -5000;
+float zMin = -10.0;
+float zMax = -2500;
 
 float x = 0.0;
 float y = 0.0;
 float z = 0.0;
 
+int limit = 0;
+
 Camera c;
+Light l;
 //================================================================
 // KEY RELEASED
 
@@ -26,9 +32,9 @@ void keyReleased() {
 
   //----------------------------------------------------------------
   // Detect when SHIFT, CTRL, CMD, or OPT are  released
-  if (keyCode == 16) shift = false;
-  if (keyCode == 17) ctrl = false;
-  if (keyCode == 18) opt = false;
+  if (keyCode == 16) shift = false; //
+  if (keyCode == 17) ctrl = false; // used to reset
+  if (keyCode == 18) opt = false; // used to apply instantly
   if (keyCode == 157) cmd = false;
 }
 
@@ -38,7 +44,8 @@ void keyReleased() {
 
 void keyPressed() {
   c = cameras.get_active_camera();
-  //println("pressed keyCode:" + keyCode + ", key: " + key);
+  l = lights.get(0);
+  println("pressed keyCode:" + keyCode + ", key: " + key);
 
   //----------------------------------------------------------------
   // Detect when SHIFT, CTRL, CMD, or OPT are pressed
@@ -50,6 +57,18 @@ void keyPressed() {
   //================================================================
   // Detect non-character keys
   switch(keyCode) {
+
+    //----------------------------------------------------------------
+    // DELETE
+  case 8:
+    int qty_voice = round(random(1, max_voices));
+    while (voices.size() != qty_voice) {
+      if ( voices.size() > qty_voice) {
+      } else if ( voices.size() < qty_voice) {
+        voices.add();
+      }
+    }
+    break;
 
     //----------------------------------------------------------------
     // SPACE_BAR
@@ -83,35 +102,84 @@ void keyPressed() {
     //----------------------------------------------------------------
     // LEFT_ARROW
   case 37:
-    if (shift) {
-      c.setRotationZ(c.rotation_target.z + rotation_step);
+    // OPT ALL BLACK
+    if (cmd || ctrl) {
+      l.setColor(color(0), opt);
     } else {
-      c.setRotationY(c.rotation_target.y + rotation_step);
+      color c = l.c_lerp;
+      c = color(
+        constrain(red(c) - 10, 0, 255),
+        constrain(green(c) - 10, 0, 255),
+        constrain(blue(c) - 10, 0, 255)
+        );
+      l.setColor(c, opt);
     }
+
     break;
 
     //----------------------------------------------------------------
     // UP_ARROW
   case 38: // up
-    c.setRotationX(c.rotation_target.x - rotation_step);
+    if (cmd || ctrl) {
+      lights.get(0).setPositionZ(1000, opt);
+    } else {
+      lights.get(0).setPositionZ(
+        constrain(lights.get(0).position_target.z + 100, 0, 1000),
+        opt
+        );
+    }
     break;
 
     //----------------------------------------------------------------
     // RIGHT_ARROW
   case 39: // right
-    if (shift) {
-      c.setRotationZ(c.rotation_target.z - rotation_step);
+    if (cmd || ctrl) {
+      l.setColor(color(255), opt);
     } else {
-      c.setRotationY(c.rotation_target.y - rotation_step);
+      color c = l.c_lerp;
+      c = color(
+        constrain(red(c) + 10, 0, 255),
+        constrain(green(c) + 10, 0, 255),
+        constrain(blue(c) + 10, 0, 255)
+        );
+      l.setColor(c, opt);
     }
     break;
 
     //----------------------------------------------------------------
     // DOWN_ARROW
   case 40: // down
-    c.setRotationX(c.rotation_target.x + rotation_step);
+    if (cmd || ctrl) {
+      lights.get(0).setPositionZ(0, opt);
+    } else {
+      lights.get(0).setPositionZ(
+        constrain(lights.get(0).position_target.z - 100, 0, 1000),
+        opt
+        );
+    }
     break;
   }
+
+  //================================================================
+  // Light Controls
+
+  //case ']':
+  //  lights.get(0).setPositionZ(
+  //    constrain(lights.get(0).position_target.z - 100, 0, 1000)
+  //    );
+  //  break;
+  //case '}':
+  //  lights.get(0).setPositionZ(
+  //    constrain(lights.get(0).position_target.z + 100, 0, 1000)
+  //    );
+  //  break;
+
+  //case '\\':
+  //  lights.get(0).setPositionZ(random(100, 500));
+  //  break;
+  //case '|':
+  //  lights.get(0).setPositionZ(250);
+  //  break;
 
   //================================================================
   switch(key) {
@@ -136,17 +204,17 @@ void keyPressed() {
     break;
   case 'Q':
     if (cmd||ctrl) {
-      c.setTranslation(new PVector(0.0, 0.0, -10.0));
+      c.setTranslation(new PVector(0.0, 0.0, 0.0));
     } else {
-      z = c.translation_target.z + translation_step * random(0.9, 1.1);
+      z = c.position_target.z + position_step * random(0.9, 1.1);
       c.setTranslationZ(z, opt);
     }
     break;
   case 'E':
     if (cmd||ctrl) {
-      c.setTranslation(new PVector(0.0, 0.0, -10.0), true);
+      c.setTranslation(new PVector(0.0, 0.0, 0.0), true);
     } else {
-      z = c.translation_target.z - translation_step * random(0.9, 1.1);
+      z = c.position_target.z - position_step * random(0.9, 1.1);
       c.setTranslationZ(z, opt);
     }
     break;
@@ -213,7 +281,6 @@ void keyPressed() {
       nationA = nations[0];
       nationB = nations[1];
     } else if (opt) {
-      println("Camera 1");
       cameras.set_active_camera(0);
     } else {
       c.setTranslationZ(lerp(zMin, zMax, 0.0));
@@ -224,7 +291,6 @@ void keyPressed() {
       nationA = nations[2];
       nationB = nations[3];
     } else if (opt) {
-      println("Camera 2");
       cameras.set_active_camera(1);
     } else {
       c.setTranslationZ(lerp(zMin, zMax, 0.11));
@@ -235,7 +301,6 @@ void keyPressed() {
       nationA = nations[4];
       nationB = nations[5];
     } else if (opt) {
-      println("Camera 3");
       cameras.set_active_camera(2);
     } else {
       c.setTranslationZ(lerp(zMin, zMax, 0.22));
@@ -243,8 +308,6 @@ void keyPressed() {
     break;
   case '4':
     if (opt) {
-      println("Camera 4");
-      println("Translation - x: "+c.translation.x+", y: "+c.translation.y+", z: "+c.translation.z);
       cameras.set_active_camera(3);
     } else {
       c.setTranslationZ(lerp(zMin, zMax, 0.33));
@@ -318,25 +381,22 @@ void keyPressed() {
 
 
   case 'M':
-    c.orbit_camera = !c.orbit_camera;
-    println("orbit camera: "+ c.orbit_camera);
-    if (c.orbit_camera) {
-      c.randomize_orbit();
-      c.orbit_rate = random(0.001, 0.01);
-    }
+    //c.orbit_camera = !c.orbit_camera;
+    //if (c.orbit_camera) {
+    //  c.randomize_orbit();
+    //  c.orbit_rate = random(0.001, 0.01);
+    //}
     break;
 
     //================================================================
     // PlanarNation Controls
 
   case 'm':
-    verts = generateVertices(qty_vertices);
-    nationA.morph(verts);
-    nationB.morph(verts);
+    nationA.morph(nationA.generateVertices(qty_vertices));
+    nationB.morph(nationB.generateVertices(qty_vertices));
     break;
 
   case'r':
-
     if (ctrl || cmd) {
       nationA.draw_mode+=1;
       nationA.draw_mode%=2;
@@ -345,8 +405,8 @@ void keyPressed() {
     }
     if (!nationA.render_texture) nationA.randomizeVertices();
     break;
-  case't':
 
+  case't':
     if (ctrl || cmd) {
       nationA.draw_mode+=1;
       nationA.draw_mode%=2;
@@ -360,6 +420,7 @@ void keyPressed() {
       if (!nationB.render_texture) nationB.randomizeVertices();
     }
     break;
+
   case'y':
 
     if (ctrl || cmd) {
@@ -391,7 +452,6 @@ void keyPressed() {
     break;
   case 'h':
     nationB.randomizeVertices();
-
     break;
 
   case 'F':
@@ -458,47 +518,57 @@ void keyPressed() {
 
   case 'U': // all voices on
     for (Voice v : voices.voices) {
-      v.random_pitch();
+      v.randomize_size("pitch", opt);
     }
+    voice_note_mode = "pitch";
     break;
 
   case 'u': // all voices on
     for (Voice v : voices.voices) {
-      v.random_pitch();
+      v.randomize_size("pitch", opt);
       v.randomize();
     }
+    voice_note_mode = "pitch";
     break;
 
   case 'i': // all voices on
     for (Voice v : voices.voices) {
-      v.random_note();
+      v.randomize_size("note", opt);
       v.randomize();
     }
+    voice_note_mode = "note";
     break;
 
   case 'I': // all voices on
     for (Voice v : voices.voices) {
-      v.random_note();
+      v.randomize_size("note", opt);
     }
+    voice_note_mode = "note";
     break;
 
   case 'o': // all voices on
     if (ctrl || cmd) {
       for (Voice v : voices.voices) {
-        v.arpeggiate = !v.arpeggiate;
+        v.arpeggiate = true;
+      }
+    } else if (opt) {
+      for (Voice v : voices.voices) {
+        v.arpeggiate = false;
       }
     } else {
       for (Voice v : voices.voices) {
-        v.random_scale();
+        v.randomize_size("scale", opt);
         v.randomize();
       }
     }
+    voice_note_mode = "scale";
     break;
 
   case 'O': // all voices on
     for (Voice v : voices.voices) {
-      v.random_scale();
+      v.randomize_size("scale", opt);
     }
+    voice_note_mode = "scale";
     break;
 
   case 'j': // all voices on
@@ -514,14 +584,12 @@ void keyPressed() {
     break;
 
   case 'k': // all voices on
-    println("Toggle Mutes");
     for (Voice v : voices.voices) {
       v.mute = !v.mute;
     }
     break;
 
   case 'K': // all voices off
-    println("Randomize Mutes");
     for (Voice v : voices.voices) {
       v.mute = random(1) < 0.5;
     }
@@ -551,30 +619,43 @@ void keyPressed() {
     }
     break;
 
+    //----------------------------------------------------------------
+    // Adding and Subtracting Voices
+
   case '_': // turn one more off
-    int limit = voices.size() - min_voices;
-    for (int i = 0; i < limit; i++) {
-      voices.remove();
-    }
+
     break;
 
   case '+': // turn one more on
-    for (int i = voices.size(); i < max_voices; i++) {
-      Voice v = new Voice(B_locrian);
-      v.mute = false;
-      voices.add(v);
-    }
+
     break;
 
   case '-': // remove one voice
-    if (voices.size() > min_voices) voices.remove();
+    if (cmd || ctrl) {
+      limit = voices.size() - min_voices;
+      for (int i = 0; i < limit; i++) {
+        voices.remove();
+      }
+    } else {
+      if (voices.size() > min_voices) voices.remove();
+    }
     break;
 
   case '=': // add one voice
-    if (voices.size() < max_voices) {
-      Voice v = new Voice(B_locrian);
-      v.mute = false;
-      voices.add(v);
+    if (cmd || ctrl) {
+      for (int i = voices.size(); i < max_voices; i++) {
+        Voice v = new Voice(B_locrian);
+        v.mute = false;
+        v.randomize_size(voice_note_mode, opt);
+        voices.add(v);
+      }
+    } else {
+      if (voices.size() < max_voices) {
+        Voice v = new Voice(B_locrian);
+        v.mute = false;
+        v.randomize_size(voice_note_mode, opt);
+        voices.add(v);
+      }
     }
     break;
 

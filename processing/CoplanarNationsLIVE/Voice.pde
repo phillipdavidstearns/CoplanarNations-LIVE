@@ -11,7 +11,6 @@ class Voices {
   ArrayList<Voice> voices;
   String[][] scale;
 
-
   //================================================================
   // Constructors
 
@@ -60,23 +59,21 @@ class Voices {
     if (_index >= 0 && _index < this.voices.size()) this.voices.remove(_index);
   }
 
-  void render(int[] _pixels) {
+  void render() {
     for (Voice v : this.voices) {
-      v.render(_pixels);
+      v.render(pixels);
     }
   }
 
-  byte[] getPixelData(int[] _pixels, int _qty) {
+  byte[] getPixelData(int _qty) {
     try {
       byte[] data = new byte[_qty];
       byte[] temp = new byte[_qty];
       for (int i = 0; i < this.voices.size(); i++) {
         Voice v = this.voices.get(i);
 
-        if (v == null) return null;
-
         if ( !v.mute) {
-          temp = v.getPixelData(_pixels, _qty);
+          temp = v.getPixelData(pixels, _qty);
           for (int j = 0; j < _qty; j++) {
             if (i == 0) {
               data[j] |= temp[j];
@@ -90,7 +87,7 @@ class Voices {
       return data;
     }
     catch (Exception e) {
-      println("Caught Exception @ getPixelData: "+e);
+      println("Caught Exception @ getPixelData: " + e);
     }
     return null;
   }
@@ -154,37 +151,11 @@ class Voice {
   Voice(String[][] _scale) {
     this.register = new Register();
     this.randomize();
-    this.random_pitch();
     this.scale = new String[_scale.length][];
     arrayCopy(_scale, this.scale);
   }
-
-
   //================================================================
   // Methods
-
-  void random_scale() {
-    int octave_index = floor(random(this.scale.length));
-    int note_index = floor(random(this.scale[octave_index].length));
-    String note_name = this.scale[octave_index][note_index];
-    this.size_progress = 1.0;
-    this.start_size = notes.get(note_name);
-    this.end_size = notes.get(note_name);
-    this.size = notes.get(note_name);
-  }
-
-  void random_note() {
-    int note_index = floor(random(notes.size()));
-    this.size_progress = 0.0;
-    this.start_size = this.size;
-    this.end_size = notes.get(notes.keyArray()[note_index]);
-  }
-
-  void random_pitch() {
-    this.size_progress = 0.0;
-    this.start_size = this.size;
-    this.end_size = floor(random(2, 1920));
-  }
 
   void update() {
     this.update_size();
@@ -296,6 +267,23 @@ class Voice {
     this.orientation = random(1) < 0.5 ? "horizontal" : "vertical";
   }
 
+  void set_orientation(String orientation) {
+    if ( orientation == "horizontal" || orientation == "vertical") {
+      this.orientation = orientation;
+    };
+  }
+
+  void toggle_orientation() {
+    switch(this.orientation) {
+    case "horizontal":
+      this.set_orientation("vertical");
+      break;
+    case "vertical":
+      this.set_orientation("horizontal");
+      break;
+    }
+  }
+
   void randomize() {
     this.randomize_position();
     this.randomize_velocity();
@@ -303,6 +291,79 @@ class Voice {
     this.randomize_mode();
     this.step_interval = floor(32/random(1, 4));
     this.randomize_orientation();
+  }
+
+  void randomize_size(String mode, boolean instant) {
+    switch(mode) {
+    case "pitch":
+      this.random_pitch(instant);
+      break;
+    case "note":
+      this.random_note(instant);
+      break;
+    case "scale":
+      this.random_scale(instant);
+      break;
+    }
+  }
+
+  void apply_size() {
+    this.size_progress = 1.0;
+    this.start_size = this.size;
+    this.end_size = this.size;
+  }
+
+  void random_scale() {
+    int octave_index = floor(random(this.scale.length));
+    int note_index = floor(random(this.scale[octave_index].length));
+    String note_name = this.scale[octave_index][note_index];
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = notes.get(note_name);
+  }
+
+  void random_scale(boolean instant) {
+    if (instant) {
+      int octave_index = floor(random(this.scale.length));
+      int note_index = floor(random(this.scale[octave_index].length));
+      String note_name = this.scale[octave_index][note_index];
+      this.size = notes.get(note_name);
+      this.apply_size();
+    } else {
+      this.random_scale();
+    }
+  }
+
+  void random_note() {
+    int note_index = floor(random(notes.size()));
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = notes.get(notes.keyArray()[note_index]);
+  }
+
+  void random_note(boolean instant) {
+    if (instant) {
+      int note_index = floor(random(notes.size()));
+      this.size = notes.get(notes.keyArray()[note_index]);
+      this.apply_size();
+    } else {
+      this.random_note();
+    }
+  }
+
+  void random_pitch() {
+    this.size_progress = 0.0;
+    this.start_size = this.size;
+    this.end_size = floor(random(2, 1920));
+  }
+
+  void random_pitch(boolean instant) {
+    if (instant) {
+      this.size = floor(random(2, 1920));
+      this.apply_size();
+    } else {
+      this.random_pitch();
+    }
   }
 
   void move() {
@@ -395,11 +456,21 @@ class Voice {
   }
 
   void setNote(String note) {
-    if (notes.hasKey(note)) {
+    if (!notes.hasKey(note)) return;
+    this.start_size = this.size;
+    this.end_size = notes.get(note);
+  }
+
+  void setNote(String note, boolean instant) {
+    if (!notes.hasKey(note)) return;
+
+    if (instant) {
       this.size_progress = 1.0;
       this.start_size = notes.get(note);
       this.end_size = notes.get(note);
       this.size = notes.get(note);
+    } else {
+      setNote(note);
     }
   }
 
@@ -423,7 +494,6 @@ class Voice {
       return (floor(this.position.y * height - (this.size / 2.0)) + height) % height;
     }
   }
-
 
   String getOrientation() {
     return orientation;

@@ -24,16 +24,16 @@ class Cameras {
   //================================================================
   // Methods
 
-  int size() {
-    return this.cameras.size();
-  }
-
   void update() {
     for (int i = 0; i < this.size(); i++) {
       Camera c = this.cameras.get(i);
       c.update();
       if (i == this.active_camera) c.render();
     }
+  }
+
+  int size() {
+    return this.cameras.size();
   }
 
   Camera set_active_camera(int index) {
@@ -92,7 +92,6 @@ class Camera {
   PVector center;
   PVector center_lerp;
   PVector center_target;
-
   float center_rate = 0.0025;
   float center_progress = 0.0;
 
@@ -133,27 +132,27 @@ class Camera {
   float orbit_progress = 0.0;
 
   boolean orbit_camera = false;
+  float cameraZ = ((height/2.0) / tan(PI*60.0/360.0));
+  float zMin=(this.cameraZ/10.0);
+  float zMax=(this.cameraZ*10.0);
 
   //================================================================
   // Constructors
 
   Camera() {
 
-    this.position = new PVector(0.0, 0.0, 1.0);
-    this.position_lerp = position.copy();
-    this.position_target = position.copy();
+    this.position = new PVector(0.0, 0.0, 0.0);
+    this.apply_position();
 
     this.center = new PVector();
     this.center_lerp = center.copy();
     this.center_target = center.copy();
 
     this.rotation = new PVector();
-    this.rotation_lerp = rotation.copy();
-    this.rotation_target = rotation.copy();
+    this.apply_rotation();
 
-    this.translation = new PVector(0.0, 0.0, -100);
-    this.translation_lerp = translation.copy();
-    this.translation_target = translation.copy();
+    this.translation = new PVector(0.0, 0.0, -1000.0);
+    this.apply_translation();
 
     this.axis = new PVector(0.0, 1.0, 0.0);// y-up
 
@@ -166,8 +165,7 @@ class Camera {
 
     this.aspect_ratio = float(width)/float(height);
 
-    this.z_near = 1.0;
-    this.z_far = 10000;
+    this.reset_clipping();
   }
 
   //================================================================
@@ -177,12 +175,17 @@ class Camera {
 
   void update() {
 
-    //this.position_camera();
-    //this.center_camera();
+    this.position_camera();
+    this.center_camera();
     this.animate_perspective();
     this.translate_camera();
     this.rotate_camera();
-    if (this.orbit_camera) this.orbit();
+    if (this.orbit_camera) {
+      this.orbit();
+    } else {
+      this.position = new PVector(0.0, 0.0, 1.0);
+      this.apply_position();
+    };
   }
 
   //----------------------------------------------------------------
@@ -234,8 +237,9 @@ class Camera {
   void orbit() {
     this.orbit_progress += this.orbit_rate;
     if (this.orbit_progress >= 1.0) this.orbit_progress-=1;
-    this.position_lerp.x = this.radius * cos(2 * PI * this.orbit_progress);
-    this.position_lerp.y = this.radius * sin(2 * PI * this.orbit_progress);
+    this.position.x = this.radius * cos(2 * PI * this.orbit_progress);
+    this.position.y = this.radius * sin(2 * PI * this.orbit_progress);
+    this.apply_position();
     this.radius = this.ease(this.radius, this.radius_target, this.radius_ease_amount);
   }
 
@@ -280,9 +284,8 @@ class Camera {
   }
 
   void reset_clipping() {
-    float cameraZ = ((height/2.0) / tan(PI*60.0/360.0));
-    this.set_z_near(cameraZ/10.0);
-    this.set_z_far(cameraZ*10.0);
+    this.set_z_near(this.cameraZ/10.0);
+    this.set_z_far(this.cameraZ*10.0);
   }
 
   void randomize_clipping() {
@@ -299,17 +302,22 @@ class Camera {
   }
 
   void set_z_near(float value) {
-    println("set_z_near: " + value);
     this.z_near = constrain(value, 0.001, 10);
   }
 
   void set_z_far(float value) {
-    println("set_z_far: " + value);
     this.z_far = constrain(value, 5000, 10000);
   }
 
   //----------------------------------------------------------------
   // Position Camera
+
+
+  void apply_position() {
+    this.position_lerp = this.position.copy();
+    this.position_target = this.position.copy();
+    this.position_progress = 1.0;
+  }
 
   void randomize_position() {
     this.setPosition(new PVector(
@@ -351,9 +359,7 @@ class Camera {
     if (instant) {
       this.position = this.position_lerp.copy();
       this.position.z = constrain(z, this.z_near, this.z_far);
-      this.position_target = this.position.copy();
-      this.position_lerp = this.position.copy();
-      this.position_progress = 1.0;
+      this.apply_position();
     } else {
       this.setPositionZ(z);
     }
@@ -368,9 +374,7 @@ class Camera {
   void setPosition(PVector _position, boolean instant) {
     if (instant) {
       this.position = _position;
-      this.position_lerp = this.position.copy();
-      this.position_target = this.position.copy();
-      this.position_progress = 1.0;
+      this.apply_position();
     } else {
       this.setPosition(_position);
     }
@@ -577,7 +581,7 @@ class Camera {
     this.setTranslation(new PVector(
       random(-width/4.0, width/4.0),
       random(-height/4.0, height/4.0),
-      -random(0.0, 2500)
+      -random(this.zMin, this.zMax/4.0)
       ));
   }
 
@@ -586,7 +590,7 @@ class Camera {
       this.setTranslation(new PVector(
         random(-width/4.0, width/4.0),
         random(-height/4.0, height/4.0),
-        -random(0.0, 2500)
+        -random(this.zMin, this.zMax/4.0)
         ), true);
     } else {
       this.randomize_translation();
