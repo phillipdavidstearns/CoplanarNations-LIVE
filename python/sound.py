@@ -5,10 +5,7 @@ import sys
 import pyaudio
 import argparse
 import logging
-import socket
 import json
-from time import sleep
-from threading import Thread, Lock, Timer
 from signal import *
 from buffer import Buffer
 

@@ -31,14 +31,6 @@ class Voices {
     }
   }
 
-  Voice get(int _index) {
-    if (_index >= 0 && _index < this.voices.size()) {
-      return this.voices.get(_index);
-    } else {
-      return null;
-    }
-  }
-
   void add() {
     this.voices.add(new Voice(this.scale));
   }
@@ -51,12 +43,20 @@ class Voices {
     this.voices.remove(this.voices.get(this.voices.size()-1));
   }
 
+  void remove(int _index) {
+    if (_index >= 0 && _index < this.voices.size()) this.voices.remove(_index);
+  }
+
   int size() {
     return this.voices.size();
   }
 
-  void remove(int _index) {
-    if (_index >= 0 && _index < this.voices.size()) this.voices.remove(_index);
+  Voice get(int _index) {
+    if (_index >= 0 && _index < this.voices.size()) {
+      return this.voices.get(_index);
+    } else {
+      return null;
+    }
   }
 
   void render() {
@@ -154,6 +154,7 @@ class Voice {
     this.scale = new String[_scale.length][];
     arrayCopy(_scale, this.scale);
   }
+
   //================================================================
   // Methods
 
@@ -420,10 +421,10 @@ class Voice {
     int pixel = color(0);
     int value = this.zero_value;
 
-    for (int l = 0; l < _qty; l++) {
+    for (int i = 0; i < _qty; i++) {
       if (!this.mute) {
 
-        this.pixel_index_offset = (l + this.last_pixel_index_offset) % this.size;
+        this.pixel_index_offset = (i + this.last_pixel_index_offset) % this.size;
         this.pixel_index = this.pixel_index_offset + start_pixel;
 
         if (this.getOrientation().equals("horizontal")) {
@@ -432,7 +433,7 @@ class Voice {
           pixel = _pixels[(this.pixel_index % height) * width + line_position];
         }
 
-        switch(mode) {
+        switch(this.mode) {
         case 0: // r
           value = (pixel >> 16 & 0xff);
           break;
@@ -448,7 +449,7 @@ class Voice {
         }
       }
 
-      line[l] = byte(value);
+      line[i] = byte(value);
     }
 
     this.last_pixel_index_offset = this.pixel_index_offset;

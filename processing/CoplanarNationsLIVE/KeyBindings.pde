@@ -45,7 +45,7 @@ void keyReleased() {
 void keyPressed() {
   c = cameras.get_active_camera();
   l = lights.get(0);
-  println("pressed keyCode:" + keyCode + ", key: " + key);
+  //println("pressed keyCode:" + keyCode + ", key: " + key);
 
   //----------------------------------------------------------------
   // Detect when SHIFT, CTRL, CMD, or OPT are pressed
